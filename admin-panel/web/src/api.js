@@ -44,6 +44,8 @@ export const searchCatalog = (query, limit = 20) =>
     body: JSON.stringify({ query, limit }),
   }).then((r) => r.json());
 
+export const getAppActivity = () => req("/app-activity");
+
 export const getNewArrivals = (limit = 24) =>
   opac(`/books/recent?limit=${limit}`).then((d) => d.books ?? []);
 

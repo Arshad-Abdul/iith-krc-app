@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCoverUrl, getNewArrivals, getRecentCheckouts, getStats, getStatus } from "../api.js";
+import { getAppActivity, getCoverUrl, getNewArrivals, getRecentCheckouts, getStats, getStatus } from "../api.js";
 
 const fmt = (dt) => dt ? new Date(dt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -27,6 +27,7 @@ export default function Dashboard({ onNavigate }) {
   const [recent, setRecent] = useState([]);
   const [services, setServices] = useState([]);
   const [arrivals, setArrivals] = useState([]);
+  const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusLoading, setStatusLoading] = useState(true);
 
@@ -41,9 +42,8 @@ export default function Dashboard({ onNavigate }) {
       .catch(() => {})
       .finally(() => setStatusLoading(false));
 
-    getNewArrivals(12)
-      .then(setArrivals)
-      .catch(() => {});
+    getNewArrivals(12).then(setArrivals).catch(() => {});
+    getAppActivity().then(setActivity).catch(() => {});
   }, []);
 
   return (
@@ -73,6 +73,46 @@ export default function Dashboard({ onNavigate }) {
         </div>
         <StatusCard services={services} loading={statusLoading} />
       </div>
+
+      {activity && (
+        <>
+          <h3 className="section-title">Library App Activity</h3>
+          <div className="stat-row" style={{ marginBottom: 16 }}>
+            <div className="stat-card accent">
+              <div className="stat-value">{activity.active_sessions}</div>
+              <div className="stat-label">Active Sessions</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{activity.logins_today}</div>
+              <div className="stat-label">Logins Today</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{activity.total_logins_tracked}</div>
+              <div className="stat-label">Logins Tracked (session)</div>
+            </div>
+          </div>
+
+          {activity.recent_logins?.length > 0 && (
+            <div className="table-wrap" style={{ marginBottom: 28 }}>
+              <table>
+                <thead>
+                  <tr><th>Patron</th><th>Card No.</th><th>Branch</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                  {activity.recent_logins.map((l, i) => (
+                    <tr key={i}>
+                      <td>{l.name || `Patron #${l.patron_id}`}</td>
+                      <td style={{ color: "#94a3b8", fontSize: 12 }}>{l.cardnumber}</td>
+                      <td style={{ color: "#94a3b8" }}>{l.library_id || "—"}</td>
+                      <td style={{ fontSize: 12 }}>{new Date(l.ts).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       {arrivals.length > 0 && (
         <>

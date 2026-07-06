@@ -10,7 +10,7 @@ import {
   getHolds,
   verifyPatronCredentials,
 } from "./kohaClient.js";
-import { createSession, destroySession, getSession } from "./sessions.js";
+import { createSession, destroySession, getSession, logLogin, getActivity } from "./sessions.js";
 
 const app = express();
 const PORT = process.env.PORT || 4002;
@@ -52,6 +52,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const token = createSession(patron);
+    logLogin(patron);
     return res.json({ token, patron });
   } catch (error) {
     const status = error instanceof KohaError ? error.status : 502;
@@ -95,6 +96,15 @@ app.get("/api/holds", requireAuth, async (req, res) => {
   } catch (error) {
     res.status(error.status || 502).json({ error: error.message });
   }
+});
+
+// Only accessible from localhost — used by admin panel server
+app.get("/api/admin/activity", (req, res) => {
+  const ip = req.ip || req.connection?.remoteAddress || "";
+  if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("localhost")) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  res.json(getActivity());
 });
 
 app.listen(PORT, () => {

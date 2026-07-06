@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,16 +72,6 @@ export default function LoginScreen() {
         />
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <TouchableOpacity
-          style={styles.forgotPassword}
-          onPress={() => {
-            if (Platform.OS === 'web') alert('Forgot Password functionality coming soon!');
-            else console.warn('Forgot Password functionality coming soon!');
-          }}
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
         <View style={{ height: 32 }} />
 
         {isLoading ? (
@@ -89,16 +79,6 @@ export default function LoginScreen() {
         ) : (
           <CustomButton title="LOGIN" onPress={handleLogin} disabled={isLoading} />
         )}
-        <View style={{ height: 32 }} />
-
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>Don&apos;t have an account? </Text>
-          <Link href="/register" asChild>
-            <TouchableOpacity>
-              <Text style={styles.registerLink}>Create Account</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -118,10 +98,5 @@ const createStyles = (theme, activeTheme) => {
     title: { fontSize: 28, fontWeight: 'bold', color: theme.text, textAlign: 'center' },
     subtitle: { fontSize: 16, color: theme.textSecondary, textAlign: 'center' },
     errorText: { color: '#DC2626', marginTop: 8, textAlign: 'center' },
-    forgotPassword: { alignSelf: 'flex-end', marginTop: 8 },
-    forgotPasswordText: { fontWeight: '600', color: theme.accent },
-    registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    registerText: { color: theme.textSecondary },
-    registerLink: { fontWeight: 'bold', color: theme.accent }
   });
 };

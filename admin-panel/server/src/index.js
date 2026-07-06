@@ -210,6 +210,17 @@ app.post("/api/return", requireAuth, async (req, res) => {
   }
 });
 
+// ─── App activity (proxied from mobile-backend) ──────────────────────────────
+
+app.get("/api/app-activity", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get("http://localhost:4002/api/admin/activity", { timeout: 3000 });
+    res.json(data);
+  } catch (e) {
+    res.status(502).json({ error: "Could not reach mobile backend." });
+  }
+});
+
 // ─── Static files (built Vite app) ───────────────────────────────────────────
 
 app.use(express.static(WEB_DIST));

@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../constants/ThemeContext';
 import { getAccountLines, getCheckouts } from '../../services/kohaApi';
 import { clearSession } from '../../services/session';
@@ -75,12 +75,6 @@ export default function ProfileScreen({ session }) {
   const patronName = patron ? `${patron.firstname ?? ''} ${patron.surname ?? ''}`.trim() || patron.userid : 'My Account';
   const patronMeta = patron?.cardnumber ? `Card No. ${patron.cardnumber}` : '';
 
-  // Review Modal State
-  const [reviewModalVisible, setReviewModalVisible] = useState(false);
-  const [reviewText, setReviewText] = useState('');
-  const [rating, setRating] = useState(5);
-  const [reviewingBook, setReviewingBook] = useState('');
-
   const StatCard = ({ icon, value, label, iconColor, iconBgColor }) => (
     <View style={styles.statCard}>
       <View style={[styles.statIconContainer, { backgroundColor: iconBgColor }]}>
@@ -92,18 +86,6 @@ export default function ProfileScreen({ session }) {
       </View>
     </View>
   );
-
-  const openReviewModal = (title) => {
-    setReviewingBook(title);
-    setReviewText('');
-    setRating(5);
-    setReviewModalVisible(true);
-  };
-
-  const submitReview = () => {
-    alert(`Review for "${reviewingBook}" submitted! It is now pending admin approval.`);
-    setReviewModalVisible(false);
-  };
 
   const BorrowedItem = ({ title, dueDate, statusColor, statusIcon }) => (
     <View style={styles.borrowedItem}>
@@ -118,9 +100,6 @@ export default function ProfileScreen({ session }) {
           <Text style={[styles.borrowedDue, { color: statusColor }]}> {dueDate}</Text>
         </View>
       </View>
-      <TouchableOpacity style={[styles.renewButton, { borderColor: theme.accent }]} onPress={() => openReviewModal(title)}>
-        <Text style={[styles.renewText, { color: theme.accent }]}>Review</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -268,44 +247,6 @@ export default function ProfileScreen({ session }) {
       </TouchableOpacity>
       <View style={{ height: 40 }} />
 
-      {/* Review Modal */}
-      <Modal visible={reviewModalVisible} animationType="slide" transparent={true} onRequestClose={() => setReviewModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Write a Review</Text>
-              <TouchableOpacity onPress={() => setReviewModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color={theme.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>for {reviewingBook}</Text>
-            
-            <View style={styles.starContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                  <MaterialIcons 
-                    name={star <= rating ? "star" : "star-border"} 
-                    size={32} 
-                    color={theme.accent} 
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TextInput
-              style={styles.reviewInput}
-              placeholder="What did you think of this book?"
-              placeholderTextColor={theme.textSecondary}
-              multiline
-              value={reviewText}
-              onChangeText={setReviewText}
-            />
-            <TouchableOpacity style={styles.submitBtn} onPress={submitReview}>
-              <Text style={styles.submitBtnText}>Submit Review</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -333,21 +274,8 @@ const createStyles = (theme, activeTheme) => StyleSheet.create({
   borrowedTextContainer: { flex: 1, marginHorizontal: 16 },
   borrowedTitle: { fontSize: 15, fontWeight: 'bold', color: theme.text },
   borrowedDue: { fontSize: 12, fontWeight: '600' },
-  renewButton: { borderWidth: 1, borderColor: theme.backgroundSelected, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
-  renewText: { color: theme.text },
   errorText: { color: '#f87171', textAlign: 'center', paddingVertical: 12 },
   emptyText: { color: theme.textSecondary, textAlign: 'center', paddingVertical: 12 },
-
-  // Modal Styles
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: theme.backgroundElement, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: theme.text },
-  modalSubtitle: { fontSize: 14, color: theme.textSecondary, marginTop: 4, marginBottom: 20 },
-  starContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: 20, gap: 8 },
-  reviewInput: { backgroundColor: theme.primary, borderRadius: 12, padding: 16, color: theme.text, minHeight: 100, textAlignVertical: 'top', marginBottom: 24, borderWidth: 1, borderColor: theme.backgroundSelected },
-  submitBtn: { backgroundColor: theme.accent, paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-  submitBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
