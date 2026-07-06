@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '../constants/theme';
+import { getSession } from '../../services/session';
 
 export default function SplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -21,8 +22,9 @@ export default function SplashScreen() {
       })
     ]).start();
 
-    const timer = setTimeout(() => {
-      router.replace('/login');
+    const timer = setTimeout(async () => {
+      const session = await getSession();
+      router.replace(session ? '/dashboard' : '/login');
     }, 3000);
     return () => clearTimeout(timer);
   }, []);

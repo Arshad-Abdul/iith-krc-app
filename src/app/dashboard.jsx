@@ -3,10 +3,20 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 // No WebBrowser import needed
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../constants/ThemeContext';
 import ProfileScreen from './profile'; // Import ProfileScreen to embed in Account tab
+import { getSession, clearSession } from '../../services/session';
+import { logout } from '../../services/kohaApi';
+import {
+  coverUrl,
+  getMostBorrowedThisMonth,
+  getRecentBooks,
+  getSubjectBooks,
+  getSubjects,
+  searchBooks,
+} from '../../services/webopacApi';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(screenWidth - 80, 300);
@@ -36,73 +46,8 @@ const newsItems = [
   },
 ];
 
-const digitalBooks = [
-  {
-    id: '1',
-    title: 'I like the sun',
-    author: 'Nelson, Sarah,',
-    image: 'https://picsum.photos/seed/qebook1/120/180',
-  },
-  {
-    id: '2',
-    title: 'كل المسوفين يكذبون ( سيرة قصصية )',
-    author: 'جولادين، سيت',
-    image: 'https://picsum.photos/seed/qebook2/120/180',
-  },
-  {
-    id: '3',
-    title: 'Earth song',
-    author: 'Reed, Susan,',
-    image: 'https://picsum.photos/seed/qebook3/120/180',
-  },
-  {
-    id: '4',
-    title: 'Changing Affinities',
-    author: 'Sarma, Abhishruti',
-    image: 'https://picsum.photos/seed/qebook4/120/180',
-  },
-];
-
-const bestBooks = [
-  {
-    id: '1',
-    title: 'Hair dos and hair don\'ts',
-    author: 'O\'Connor, Jane.',
-    image: 'https://picsum.photos/seed/qaudio1/120/180',
-  },
-  {
-    id: '2',
-    title: 'His dark materials',
-    author: 'Pullman, Philip,',
-    image: 'https://picsum.photos/seed/qaudio2/120/180',
-  },
-  {
-    id: '3',
-    title: 'The republic',
-    author: 'Plato,',
-    image: 'https://picsum.photos/seed/qaudio3/120/180',
-  },
-  {
-    id: '4',
-    title: 'Design your thinking',
-    author: 'Soni, Pavan',
-    image: 'https://picsum.photos/seed/qaudio4/120/180',
-  },
-];
-
-const historicalFictionImages = [
-  'https://picsum.photos/seed/hist1/60/90',
-  'https://picsum.photos/seed/hist2/60/90',
-  'https://picsum.photos/seed/hist3/60/90',
-  'https://picsum.photos/seed/hist4/60/90',
-];
-
-const mentalHealthImages = [
-  'https://picsum.photos/seed/ment1/60/90',
-  'https://picsum.photos/seed/ment2/60/90',
-  'https://picsum.photos/seed/ment3/60/90',
-  'https://picsum.photos/seed/ment4/60/90',
-];
+// Real Koha-backed subject buckets shown as "Featured Collections" on Home.
+const FEATURED_SUBJECT_KEYS = ['literature-communication', 'philosophy-psychology'];
 
 // Events use the same updated data
 const events = [...newsItems];
@@ -141,12 +86,72 @@ export default function DashboardScreen() {
   const [searchSource, setSearchSource] = useState('all');
   const [isSourceModalVisible, setIsSourceModalVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const [session, setSession] = useState(null);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [trendingBooks, setTrendingBooks] = useState([]);
+  const [featuredCollections, setFeaturedCollections] = useState([]);
+  const [catalogResults, setCatalogResults] = useState(null);
+  const [isSearchingCatalog, setIsSearchingCatalog] = useState(false);
+  const [catalogSearchError, setCatalogSearchError] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      const stored = await getSession();
+      if (!stored) {
+        router.replace('/login');
+        return;
+      }
+      setSession(stored);
+      try {
+        const [arrivals, trending, allSubjects] = await Promise.all([
+          getRecentBooks(50),
+          getMostBorrowedThisMonth(20),
+          getSubjects(),
+        ]);
+        setNewArrivals(arrivals);
+        setTrendingBooks(trending);
+
+        const subjects = FEATURED_SUBJECT_KEYS
+          .map((key) => allSubjects.find((s) => s.key === key))
+          .filter(Boolean);
+        const collections = await Promise.all(
+          subjects.map(async (subject) => ({
+            subject,
+            books: await getSubjectBooks(subject.key, 4),
+          }))
+        );
+        setFeaturedCollections(collections);
+      } catch (err) {
+        console.warn('Could not load catalog highlights:', err.message);
+      }
+    })();
+  }, []);
 
   const styles = createStyles(theme, insets);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsSettingsVisible(false);
+    if (session?.token) await logout(session.token);
+    await clearSession();
     router.replace('/login');
+  };
+
+  const handleCatalogSearch = async (query) => {
+    setIsSearchingCatalog(true);
+    setCatalogSearchError('');
+    setCatalogResults(null);
+    try {
+      const results = await searchBooks(query);
+      setCatalogResults(results.books ?? []);
+    } catch (err) {
+      setCatalogSearchError(err.message || 'Catalog search failed.');
+    } finally {
+      setIsSearchingCatalog(false);
+    }
+  };
+
+  const openBookDetail = (biblioId) => {
+    router.push({ pathname: '/book-detail', params: { biblioId } });
   };
 
   const handleSearchSubmit = () => {
@@ -155,17 +160,12 @@ export default function DashboardScreen() {
       alert('Please enter a search query.');
       return;
     }
-    
+
     switch (searchSource) {
       case 'opac':
-        router.push({ 
-          pathname: '/web-view', 
-          params: { 
-            url: `https://opac.krc.iith.ac.in/cgi-bin/koha/opac-search.pl?q=${encodeURIComponent(query)}`, 
-            title: 'OPAC Catalog Search' 
-          } 
-        });
-        break;
+      case 'all':
+        handleCatalogSearch(query);
+        return;
       case 'doi':
         router.push({ 
           pathname: '/doi-search', 
@@ -199,15 +199,8 @@ export default function DashboardScreen() {
           } 
         });
         break;
-      case 'all':
       default:
-        router.push({ 
-          pathname: '/web-view', 
-          params: { 
-            url: `https://opac.krc.iith.ac.in/cgi-bin/koha/opac-search.pl?q=${encodeURIComponent(query)}`, 
-            title: 'Catalog Search' 
-          } 
-        });
+        handleCatalogSearch(query);
         break;
     }
   };
@@ -266,31 +259,35 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-        {digitalBooks.map((item) => (
-          <View key={item.id} style={styles.bookCard}>
-            <Image source={{ uri: item.image }} style={styles.bookCover} />
-            <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
-            <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
-          </View>
-        ))}
+        {newArrivals.length === 0 ? (
+          <Text style={styles.emptyShelfText}>No new arrivals to show right now.</Text>
+        ) : (
+          newArrivals.map((item) => (
+            <TouchableOpacity key={item.biblio_id} style={styles.bookCard} onPress={() => openBookDetail(item.biblio_id)}>
+              <Image source={{ uri: coverUrl(item.biblio_id) }} style={styles.bookCover} />
+              <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
-      {/* Best Books of the Week */}
+      {/* Trending This Month */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Best Books of the Week</Text>
-        <TouchableOpacity style={styles.moreButton}>
-          <Text style={styles.moreText}>More</Text>
-          <MaterialIcons name="arrow-forward" size={16} color={theme.accent} />
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Trending This Month</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-        {bestBooks.map((item) => (
-          <View key={item.id} style={styles.bookCard}>
-            <Image source={{ uri: item.image }} style={styles.bookCover} />
-            <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
-            <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
-          </View>
-        ))}
+        {trendingBooks.length === 0 ? (
+          <Text style={styles.emptyShelfText}>No trending data yet.</Text>
+        ) : (
+          trendingBooks.map((item) => (
+            <TouchableOpacity key={item.biblio_id} style={styles.bookCard} onPress={() => openBookDetail(item.biblio_id)}>
+              <Image source={{ uri: coverUrl(item.biblio_id) }} style={styles.bookCover} />
+              <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
       {/* Featured Collections */}
@@ -298,22 +295,18 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>Featured Collections</Text>
       </View>
       <View style={styles.featuredCollectionsRow}>
-        <View style={styles.featuredCard}>
-          <Text style={styles.featuredCardTitle}>Historical Fiction</Text>
-          <View style={styles.featuredGrid}>
-            {historicalFictionImages.map((uri, idx) => (
-              <Image key={idx} source={{ uri }} style={styles.featuredGridImage} />
-            ))}
+        {featuredCollections.map(({ subject, books }) => (
+          <View key={subject.key} style={styles.featuredCard}>
+            <Text style={styles.featuredCardTitle}>{subject.label}</Text>
+            <View style={styles.featuredGrid}>
+              {books.map((book) => (
+                <TouchableOpacity key={book.biblio_id} onPress={() => openBookDetail(book.biblio_id)}>
+                  <Image source={{ uri: coverUrl(book.biblio_id) }} style={styles.featuredGridImage} />
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
-        <View style={styles.featuredCard}>
-          <Text style={styles.featuredCardTitle}>Mental Health</Text>
-          <View style={styles.featuredGrid}>
-            {mentalHealthImages.map((uri, idx) => (
-              <Image key={idx} source={{ uri }} style={styles.featuredGridImage} />
-            ))}
-          </View>
-        </View>
+        ))}
       </View>
 
       {/* Events */}
@@ -437,6 +430,37 @@ export default function DashboardScreen() {
           <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
+
+      {(isSearchingCatalog || catalogSearchError || catalogResults) && (
+        <View style={styles.catalogResultsContainer}>
+          {isSearchingCatalog ? (
+            <ActivityIndicator size="small" color={theme.accent} />
+          ) : catalogSearchError ? (
+            <Text style={styles.catalogResultsError}>{catalogSearchError}</Text>
+          ) : catalogResults.length === 0 ? (
+            <Text style={styles.catalogResultsEmpty}>No results found.</Text>
+          ) : (
+            catalogResults.map((item, index) => (
+              <TouchableOpacity
+                key={item.biblio_id ?? index}
+                style={styles.catalogResultItem}
+                onPress={() => openBookDetail(item.biblio_id)}
+              >
+                <Image source={{ uri: coverUrl(item.biblio_id) }} style={styles.catalogResultCover} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.catalogResultTitle} numberOfLines={2}>{item.title}</Text>
+                  {item.author ? <Text style={styles.catalogResultAuthor} numberOfLines={1}>{item.author}</Text> : null}
+                  {typeof item.available_count === 'number' ? (
+                    <Text style={styles.catalogResultAvailability}>
+                      {item.available_count > 0 ? `${item.available_count} available` : 'Not available'}
+                    </Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
 
       {/* 1. OPAC Search (Hero Card) */}
       <View style={styles.searchPageCard}>
@@ -688,7 +712,7 @@ export default function DashboardScreen() {
         {activeTab === 'menu' && renderMenuTab()}
         {activeTab === 'search' && renderSearchTab()}
         {activeTab === 'events' && renderEventsTab()}
-        {activeTab === 'account' && <ProfileScreen />}
+        {activeTab === 'account' && <ProfileScreen session={session} />}
       </View>
 
       {/* Bottom Tab Bar */}
@@ -962,13 +986,18 @@ const createStyles = (theme, insets) => {
     borderWidth: 1, 
     borderColor: 'rgba(255,255,255,0.03)',
   },
-  bookCover: { 
-    width: '100%', 
-    height: 160, 
-    borderRadius: 12, 
-    marginBottom: 8 
+  bookCover: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginBottom: 8
   },
-  bookTitle: { 
+  emptyShelfText: {
+    color: theme.textSecondary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  bookTitle: {
     fontWeight: 'bold', 
     fontSize: 13, 
     color: theme.text, 
@@ -1106,6 +1135,53 @@ const createStyles = (theme, insets) => {
     fontSize: 12,
     color: theme.textSecondary,
     lineHeight: 16,
+  },
+
+  catalogResultsContainer: {
+    marginBottom: 24,
+  },
+  catalogResultsError: {
+    color: '#f87171',
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  catalogResultsEmpty: {
+    color: theme.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  catalogResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.backgroundElement,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  catalogResultCover: {
+    width: 44,
+    height: 64,
+    borderRadius: 6,
+    backgroundColor: theme.backgroundSelected,
+    marginRight: 12,
+  },
+  catalogResultAvailability: {
+    fontSize: 11,
+    color: theme.accent,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  catalogResultTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  catalogResultAuthor: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 2,
   },
 
   // Search Tab Cards

@@ -1,67 +1,62 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../constants/ThemeContext';
+import { getAccountLines, getCheckouts } from '../../services/kohaApi';
+import { clearSession } from '../../services/session';
 
-export default function ProfileScreen() {
+const daysUntil = (dateString) => {
+  if (!dateString) return null;
+  const diffMs = new Date(dateString).getTime() - Date.now();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+};
+
+export default function ProfileScreen({ session }) {
   const { theme, activeTheme } = useTheme();
   const styles = createStyles(theme, activeTheme);
-  const [weekOffset, setWeekOffset] = useState(0);
+
+  const [checkouts, setCheckouts] = useState([]);
+  const [accountLines, setAccountLines] = useState([]);
+  const [isLoadingCirculation, setIsLoadingCirculation] = useState(true);
+  const [circulationError, setCirculationError] = useState('');
+
+  useEffect(() => {
+    if (!session?.token) {
+      setIsLoadingCirculation(false);
+      return;
+    }
+    (async () => {
+      setIsLoadingCirculation(true);
+      setCirculationError('');
+      try {
+        const [checkoutData, accountData] = await Promise.all([
+          getCheckouts(session.token),
+          getAccountLines(session.token),
+        ]);
+        setCheckouts(Array.isArray(checkoutData) ? checkoutData : []);
+        setAccountLines(Array.isArray(accountData) ? accountData : []);
+      } catch (err) {
+        setCirculationError(err.message || 'Could not load your library account.');
+      } finally {
+        setIsLoadingCirculation(false);
+      }
+    })();
+  }, [session]);
+
+  const totalFines = accountLines.reduce(
+    (sum, line) => sum + Number(line.amount_outstanding ?? line.amountoutstanding ?? 0),
+    0
+  );
+  const patron = session?.patron;
+  const patronName = patron ? `${patron.firstname ?? ''} ${patron.surname ?? ''}`.trim() || patron.userid : 'My Account';
+  const patronMeta = patron?.cardnumber ? `Card No. ${patron.cardnumber}` : '';
 
   // Review Modal State
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(5);
   const [reviewingBook, setReviewingBook] = useState('');
-
-  const weekData = [
-    {
-      label: 'This Week (May 11 - May 15)',
-      statTitle: 'Today',
-      statsTime: '2h 15m',
-      progressLabel: 'Daily Goal: 3h',
-      progressRight: '75% Completed',
-      pctComplete: '75%',
-      weeklyLog: [
-        { day: 'Mon', pct: '58%' },
-        { day: 'Tue', pct: '75%' },
-        { day: 'Wed', pct: '16%' },
-        { day: 'Thu', pct: '100%' },
-        { day: 'Fri', pct: '41%' },
-      ]
-    },
-    {
-      label: 'Last Week (May 4 - May 8)',
-      statTitle: 'Daily Avg',
-      statsTime: '2h 28m',
-      progressLabel: 'Avg Daily: 2.5h',
-      progressRight: '82% Efficiency',
-      pctComplete: '82%',
-      weeklyLog: [
-        { day: 'Mon', pct: '83%' },
-        { day: 'Tue', pct: '100%' },
-        { day: 'Wed', pct: '50%' },
-        { day: 'Thu', pct: '75%' },
-        { day: 'Fri', pct: '100%' },
-      ]
-    },
-    {
-      label: '2 Weeks Ago (Apr 27 - May 1)',
-      statTitle: 'Daily Avg',
-      statsTime: '1h 57m',
-      progressLabel: 'Avg Daily: 2.5h',
-      progressRight: '65% Efficiency',
-      pctComplete: '65%',
-      weeklyLog: [
-        { day: 'Mon', pct: '33%' },
-        { day: 'Tue', pct: '66%' },
-        { day: 'Wed', pct: '100%' },
-        { day: 'Thu', pct: '41%' },
-        { day: 'Fri', pct: '83%' },
-      ]
-    }
-  ];
 
   const StatCard = ({ icon, value, label, iconColor, iconBgColor }) => (
     <View style={styles.statCard}>
@@ -111,9 +106,9 @@ export default function ProfileScreen() {
       <View style={{ height: 20 }} />
       
       <View style={styles.header}>
-        <Text style={styles.name}>John Doe</Text>
+        <Text style={styles.name}>{patronName}</Text>
         <View style={{ height: 4 }} />
-        <Text style={styles.course}>CS20BTECH11001 • B.Tech CSE</Text>
+        <Text style={styles.course}>{patronMeta}</Text>
       </View>
       <View style={{ height: 25 }} />
 
@@ -126,81 +121,16 @@ export default function ProfileScreen() {
       </View>
       <View style={{ height: 30 }} />
 
-      <View style={styles.activitySection}>
-        <Text style={styles.sectionHeaderTitle}>Your Library Activity</Text>
-        
-        <View style={styles.statsBigCard}>
-          {/* Week Selection Control Slider */}
-          <View style={styles.weekSelectorRow}>
-            <TouchableOpacity 
-              disabled={weekOffset >= weekData.length - 1} 
-              onPress={() => setWeekOffset(prev => prev + 1)}
-              style={[styles.weekNavBtn, weekOffset >= weekData.length - 1 && styles.disabledBtn]}
-            >
-              <MaterialIcons name="chevron-left" size={24} color={weekOffset >= weekData.length - 1 ? theme.textSecondary : theme.accent} />
-            </TouchableOpacity>
-            
-            <Text style={styles.weekLabel}>{weekData[weekOffset].label}</Text>
-            
-            <TouchableOpacity 
-              disabled={weekOffset === 0} 
-              onPress={() => setWeekOffset(prev => prev - 1)}
-              style={[styles.weekNavBtn, weekOffset === 0 && styles.disabledBtn]}
-            >
-              <MaterialIcons name="chevron-right" size={24} color={weekOffset === 0 ? theme.textSecondary : theme.accent} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.statsTopRow}>
-            <View style={styles.statsBadge}>
-              <MaterialIcons name="timer" size={20} color={theme.accent} />
-              <View style={{ width: 6 }} />
-              <Text style={styles.statsTodayText}>{weekData[weekOffset].statTitle}</Text>
-            </View>
-            <Text style={styles.statsTimeVal}>{weekData[weekOffset].statsTime}</Text>
-          </View>
-
-          <View style={{ height: 16 }} />
-
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: weekData[weekOffset].pctComplete }]} />
-          </View>
-
-          <View style={{ height: 8 }} />
-
-          <View style={styles.progressTextRow}>
-            <Text style={styles.progressTextLeft}>{weekData[weekOffset].progressLabel}</Text>
-            <Text style={styles.progressTextRight}>{weekData[weekOffset].progressRight}</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.weeklyTitle}>Weekly Progress Chart</Text>
-          <View style={{ height: 8 }} />
-          
-          <View style={styles.weeklyLogContainer}>
-            {weekData[weekOffset].weeklyLog.map((log, index) => (
-              <View key={index} style={styles.barColumn}>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { height: log.pct }]} />
-                </View>
-                <Text style={styles.barDayLabel}>{log.day}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-      <View style={{ height: 25 }} />
 
       <View style={styles.statsContainer}>
         <View style={{ flex: 1, marginRight: 8 }}>
-          <StatCard icon="menu-book" value="2" label="Borrowed" iconColor={theme.accent} iconBgColor="rgba(212, 160, 23, 0.1)" />
+          <StatCard icon="menu-book" value={String(checkouts.length)} label="Borrowed" iconColor={theme.accent} iconBgColor="rgba(212, 160, 23, 0.1)" />
         </View>
         <View style={{ flex: 1, marginRight: 8 }}>
-          <StatCard icon="account-balance-wallet" value="₹0" label="Total Fines" iconColor="#4ade80" iconBgColor="rgba(74, 222, 128, 0.1)" />
+          <StatCard icon="account-balance-wallet" value={`₹${totalFines.toFixed(2)}`} label="Total Fines" iconColor={totalFines > 0 ? '#f87171' : '#4ade80'} iconBgColor={totalFines > 0 ? 'rgba(248, 113, 113, 0.1)' : 'rgba(74, 222, 128, 0.1)'} />
         </View>
         <View style={{ flex: 1 }}>
-          <StatCard icon="history" value="2" label="History" iconColor="#4ade80" iconBgColor="rgba(74, 222, 128, 0.1)" />
+          <StatCard icon="history" value={String(accountLines.length)} label="Account Lines" iconColor="#4ade80" iconBgColor="rgba(74, 222, 128, 0.1)" />
         </View>
       </View>
       <View style={{ height: 30 }} />
@@ -208,28 +138,47 @@ export default function ProfileScreen() {
       <View style={styles.borrowedSection}>
         <View style={styles.borrowedHeader}>
           <Text style={styles.borrowedHeaderTitle}>Currently Borrowed</Text>
-          <Text style={styles.borrowedCount}>2 Items</Text>
+          <Text style={styles.borrowedCount}>{checkouts.length} Items</Text>
         </View>
         <View style={{ height: 20 }} />
 
-        <BorrowedItem 
-          title="Introduction to Algorithms" 
-          dueDate="Due in 3 days" 
-          statusColor="#f59e0b" 
-          statusIcon="access-time" 
-        />
-        <View style={{ height: 15 }} />
-        <BorrowedItem 
-          title="Deep Learning" 
-          dueDate="Due in 14 days" 
-          statusColor="#4ade80" 
-          statusIcon="access-time" 
-        />
+        {isLoadingCirculation ? (
+          <ActivityIndicator size="small" color={theme.accent} />
+        ) : circulationError ? (
+          <Text style={styles.errorText}>{circulationError}</Text>
+        ) : checkouts.length === 0 ? (
+          <Text style={styles.emptyText}>You have no items checked out.</Text>
+        ) : (
+          checkouts.map((item, index) => {
+            const remaining = daysUntil(item.date_due ?? item.due_date);
+            const overdue = remaining !== null && remaining < 0;
+            return (
+              <View key={item.checkout_id ?? index}>
+                <BorrowedItem
+                  title={item.title ?? item.biblio_title ?? `Item #${item.item_id ?? index}`}
+                  dueDate={
+                    remaining === null
+                      ? 'Due date unavailable'
+                      : overdue
+                        ? `Overdue by ${Math.abs(remaining)} day(s)`
+                        : `Due in ${remaining} day(s)`
+                  }
+                  statusColor={overdue ? '#f87171' : '#4ade80'}
+                  statusIcon={overdue ? 'error-outline' : 'access-time'}
+                />
+                <View style={{ height: 15 }} />
+              </View>
+            );
+          })
+        )}
       </View>
       <View style={{ height: 10 }} />
-      <TouchableOpacity 
-        style={styles.logoutButton} 
-        onPress={() => router.replace('/login')}
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={async () => {
+          await clearSession();
+          router.replace('/login');
+        }}
       >
         <MaterialIcons name="logout" size={20} color="#EF4444" style={{ marginRight: 8 }} />
         <Text style={styles.logoutText}>Sign Out</Text>
@@ -303,69 +252,8 @@ const createStyles = (theme, activeTheme) => StyleSheet.create({
   borrowedDue: { fontSize: 12, fontWeight: '600' },
   renewButton: { borderWidth: 1, borderColor: theme.backgroundSelected, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
   renewText: { color: theme.text },
-
-  // Activity stats styling
-  activitySection: { paddingHorizontal: 20 },
-  sectionHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: theme.text, marginBottom: 12 },
-  statsBigCard: {
-    backgroundColor: theme.backgroundElement,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  weekSelectorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    backgroundColor: theme.backgroundSelected,
-    padding: 6,
-    borderRadius: 12,
-  },
-  weekNavBtn: {
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: theme.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  disabledBtn: {
-    backgroundColor: 'transparent',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  weekLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: theme.accent,
-  },
-  statsTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  statsBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(212, 160, 23, 0.1)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
-  statsTodayText: { fontWeight: 'bold', color: theme.accent, fontSize: 13 },
-  statsTimeVal: { fontSize: 26, fontWeight: 'bold', color: theme.text },
-  progressBarBg: { height: 10, backgroundColor: theme.backgroundSelected, borderRadius: 5, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: theme.accent, borderRadius: 5 },
-  progressTextRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  progressTextLeft: { fontSize: 12, color: theme.textSecondary, fontWeight: '500' },
-  progressTextRight: { fontSize: 12, color: theme.accent, fontWeight: 'bold' },
-  divider: { height: 1, backgroundColor: theme.backgroundSelected, marginVertical: 16 },
-  weeklyTitle: { fontSize: 14, fontWeight: 'bold', color: theme.textSecondary },
-  weeklyLogContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 75, paddingTop: 8 },
-  barColumn: { alignItems: 'center', flex: 1 },
-  barTrack: { height: 45, width: 14, backgroundColor: theme.backgroundSelected, borderRadius: 7, justifyContent: 'flex-end', overflow: 'hidden' },
-  barFill: { width: '100%', backgroundColor: theme.accent, borderRadius: 7 },
-  barDayLabel: { fontSize: 11, color: theme.textSecondary, marginTop: 6, fontWeight: '500' },
+  errorText: { color: '#f87171', textAlign: 'center', paddingVertical: 12 },
+  emptyText: { color: theme.textSecondary, textAlign: 'center', paddingVertical: 12 },
 
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

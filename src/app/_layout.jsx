@@ -30,8 +30,8 @@ function MainLayout() {
         <Stack.Screen name="institutional-resources" options={{ title: 'Institutional Repositories' }} />
         <Stack.Screen name="off-campus-access" options={{ title: 'Off-Campus Access' }} />
         <Stack.Screen name="profile" options={{ title: 'My Account' }} />
-        <Stack.Screen name="admin-dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="doi-search" options={{ headerShown: false }} />
+        <Stack.Screen name="book-detail" options={{ headerShown: false }} />
         <Stack.Screen name="web-view" options={{ headerShown: false }} />
       </Stack>
     </>
