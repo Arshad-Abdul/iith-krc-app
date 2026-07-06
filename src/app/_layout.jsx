@@ -32,6 +32,7 @@ function MainLayout() {
         <Stack.Screen name="profile" options={{ title: 'My Account' }} />
         <Stack.Screen name="doi-search" options={{ headerShown: false }} />
         <Stack.Screen name="book-detail" options={{ headerShown: false }} />
+        <Stack.Screen name="subject-books" options={{ headerShown: false }} />
         <Stack.Screen name="web-view" options={{ headerShown: false }} />
       </Stack>
     </>

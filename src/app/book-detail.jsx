@@ -5,6 +5,7 @@ import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacit
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../constants/ThemeContext';
 import { coverUrl, getBookDetail } from '../../services/webopacApi';
+import { addToWishlist, isInWishlist, removeFromWishlist } from '../../services/wishlist';
 
 export default function BookDetailScreen() {
   const { biblioId } = useLocalSearchParams();
@@ -15,6 +16,7 @@ export default function BookDetailScreen() {
   const [book, setBook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [wishlisted, setWishlisted] = useState(false);
 
   useEffect(() => {
     if (!biblioId) return;
@@ -24,6 +26,7 @@ export default function BookDetailScreen() {
       try {
         const data = await getBookDetail(biblioId);
         setBook(data);
+        setWishlisted(await isInWishlist(Number(biblioId)));
       } catch (err) {
         setError(err.message || 'Could not load this book.');
       } finally {
@@ -31,6 +34,19 @@ export default function BookDetailScreen() {
       }
     })();
   }, [biblioId]);
+
+  const toggleWishlist = async () => {
+    if (!book) return;
+    if (wishlisted) {
+      await removeFromWishlist(book.biblio_id);
+      setWishlisted(false);
+    } else {
+      await addToWishlist({ biblio_id: book.biblio_id, title: book.title, author: book.author });
+      setWishlisted(true);
+    }
+  };
+
+  const subjects = Array.isArray(book?.subjects) ? book.subjects : [];
 
   return (
     <View style={styles.container}>
@@ -40,7 +56,13 @@ export default function BookDetailScreen() {
             <MaterialIcons name="arrow-back" size={26} color={theme.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>Book Details</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={toggleWishlist} style={styles.backButton}>
+            <MaterialIcons
+              name={wishlisted ? 'bookmark' : 'bookmark-border'}
+              size={26}
+              color={wishlisted ? theme.accent : theme.text}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -62,16 +84,34 @@ export default function BookDetailScreen() {
 
           <View style={styles.metaRow}>
             {book.copyrightdate ? (
-              <View style={styles.metaChip}>
-                <Text style={styles.metaChipText}>{book.copyrightdate}</Text>
-              </View>
+              <View style={styles.metaChip}><Text style={styles.metaChipText}>{book.copyrightdate}</Text></View>
             ) : null}
             {book.isbn ? (
-              <View style={styles.metaChip}>
-                <Text style={styles.metaChipText}>ISBN {book.isbn}</Text>
-              </View>
+              <View style={styles.metaChip}><Text style={styles.metaChipText}>ISBN {book.isbn}</Text></View>
             ) : null}
           </View>
+
+          {subjects.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Subjects</Text>
+              <View style={styles.subjectRow}>
+                {subjects.map((s, i) => {
+                  const key = s?.subject_key ?? s?.key ?? String(s);
+                  const label = s?.subject_name ?? s?.name ?? String(s);
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => router.push({ pathname: '/subject-books', params: { subjectKey: key, label } })}
+                    >
+                      <View style={styles.subjectChip}>
+                        <Text style={styles.subjectChipText}>{label}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
 
           {book.notes ? (
             <>
@@ -84,8 +124,8 @@ export default function BookDetailScreen() {
           {(book.items ?? []).length === 0 ? (
             <Text style={styles.emptyText}>No holdings information available.</Text>
           ) : (
-            book.items.map((item) => (
-              <View key={item.itemnumber} style={styles.itemRow}>
+            book.items.map((item, i) => (
+              <View key={item.itemnumber ?? i} style={styles.itemRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.itemCallNumber}>{item.call_number || item.item_type_desc}</Text>
                   <Text style={styles.itemMeta}>
@@ -118,13 +158,9 @@ const createStyles = (theme, insets) =>
     container: { flex: 1, backgroundColor: theme.primary },
     headerSafeArea: { backgroundColor: theme.primary, paddingTop: insets?.top || 0 },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 56,
-      paddingHorizontal: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255,255,255,0.05)',
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      height: 56, paddingHorizontal: 12,
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
     },
     backButton: { padding: 8 },
     headerTitle: { flex: 1, textAlign: 'center', color: theme.text, fontSize: 17, fontWeight: 'bold' },
@@ -140,14 +176,16 @@ const createStyles = (theme, insets) =>
     sectionTitle: { alignSelf: 'flex-start', fontSize: 15, fontWeight: 'bold', color: theme.text, marginTop: 24, marginBottom: 8 },
     notes: { alignSelf: 'flex-start', fontSize: 13, color: theme.textSecondary, lineHeight: 20 },
     emptyText: { alignSelf: 'flex-start', color: theme.textSecondary, fontSize: 13 },
+    subjectRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignSelf: 'flex-start' },
+    subjectChip: {
+      backgroundColor: theme.backgroundElement, borderRadius: 20,
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderWidth: 1, borderColor: theme.accent + '44',
+    },
+    subjectChipText: { color: theme.accent, fontSize: 12, fontWeight: '600' },
     itemRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      width: '100%',
-      backgroundColor: theme.backgroundElement,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 8,
+      flexDirection: 'row', alignItems: 'center', width: '100%',
+      backgroundColor: theme.backgroundElement, borderRadius: 12, padding: 12, marginBottom: 8,
     },
     itemCallNumber: { color: theme.text, fontWeight: '600', fontSize: 13 },
     itemMeta: { color: theme.textSecondary, fontSize: 11, marginTop: 2 },

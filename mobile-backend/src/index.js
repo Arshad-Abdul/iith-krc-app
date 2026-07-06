@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import {
   KohaError,
+  enrichCheckoutsWithTitles,
   findPatronByUserid,
   getAccountLines,
   getCheckouts,
@@ -70,7 +71,8 @@ app.get("/api/me", requireAuth, (req, res) => {
 
 app.get("/api/checkouts", requireAuth, async (req, res) => {
   try {
-    const data = await getCheckouts(req.session.patron.patron_id);
+    const raw = await getCheckouts(req.session.patron.patron_id);
+    const data = await enrichCheckoutsWithTitles(Array.isArray(raw) ? raw : []);
     res.json(data);
   } catch (error) {
     res.status(error.status || 502).json({ error: error.message });

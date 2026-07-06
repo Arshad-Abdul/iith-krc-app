@@ -90,14 +90,17 @@ export default function PatronSearch() {
                   <h4 className="section-title">Current Checkouts</h4>
                   <div className="table-wrap">
                     <table>
-                      <thead><tr><th>Item ID</th><th>Checked Out</th><th>Due Date</th><th>Status</th></tr></thead>
+                      <thead><tr><th>Title</th><th>Checked Out</th><th>Due Date</th><th>Status</th></tr></thead>
                       <tbody>
                         {detail.checkouts.map((c) => {
                           const days = daysUntil(c.due_date);
                           const overdue = days !== null && days < 0;
                           return (
                             <tr key={c.checkout_id}>
-                              <td>{c.item_id}</td>
+                              <td style={{ maxWidth: 280 }}>
+                                <div style={{ fontWeight: 500 }}>{c.title || `Item #${c.item_id}`}</div>
+                                {c.author && <div style={{ fontSize: 11, color: "#94a3b8" }}>{c.author}</div>}
+                              </td>
                               <td>{fmt(c.checkout_date)}</td>
                               <td>{fmt(c.due_date)}</td>
                               <td><span className={overdue ? "badge red" : "badge green"}>{overdue ? `Overdue ${Math.abs(days)}d` : `${days}d left`}</span></td>

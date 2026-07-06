@@ -1,10 +1,13 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../constants/ThemeContext';
 import { getAccountLines, getCheckouts } from '../../services/kohaApi';
 import { clearSession } from '../../services/session';
+import { getCache, saveCache } from '../../services/cache';
+import { coverUrl } from '../../services/webopacApi';
+import { getWishlist, removeFromWishlist } from '../../services/wishlist';
 
 const daysUntil = (dateString) => {
   if (!dateString) return null;
@@ -20,6 +23,13 @@ export default function ProfileScreen({ session }) {
   const [accountLines, setAccountLines] = useState([]);
   const [isLoadingCirculation, setIsLoadingCirculation] = useState(true);
   const [circulationError, setCirculationError] = useState('');
+  const [cacheTs, setCacheTs] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
+  const [showWishlist, setShowWishlist] = useState(false);
+
+  useEffect(() => {
+    getWishlist().then(setWishlist).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!session?.token) {
@@ -27,17 +37,30 @@ export default function ProfileScreen({ session }) {
       return;
     }
     (async () => {
-      setIsLoadingCirculation(true);
-      setCirculationError('');
+      // Show cached data immediately while fetching
+      const cached = await getCache(`profile_${session.patron?.patron_id}`);
+      if (cached) {
+        setCheckouts(cached.data.checkouts ?? []);
+        setAccountLines(cached.data.accountLines ?? []);
+        setCacheTs(cached.ts);
+        setIsLoadingCirculation(false);
+      } else {
+        setIsLoadingCirculation(true);
+      }
+
       try {
         const [checkoutData, accountData] = await Promise.all([
           getCheckouts(session.token),
           getAccountLines(session.token),
         ]);
-        setCheckouts(Array.isArray(checkoutData) ? checkoutData : []);
-        setAccountLines(Array.isArray(accountData) ? accountData : []);
+        const co = Array.isArray(checkoutData) ? checkoutData : [];
+        const ac = Array.isArray(accountData) ? accountData : [];
+        setCheckouts(co);
+        setAccountLines(ac);
+        setCacheTs(null);
+        await saveCache(`profile_${session.patron?.patron_id}`, { checkouts: co, accountLines: ac });
       } catch (err) {
-        setCirculationError(err.message || 'Could not load your library account.');
+        if (!cached) setCirculationError(err.message || 'Could not load your library account.');
       } finally {
         setIsLoadingCirculation(false);
       }
@@ -142,6 +165,11 @@ export default function ProfileScreen({ session }) {
         </View>
         <View style={{ height: 20 }} />
 
+        {cacheTs && (
+          <Text style={[styles.emptyText, { marginBottom: 8 }]}>
+            Showing cached data · last updated {new Date(cacheTs).toLocaleTimeString()}
+          </Text>
+        )}
         {isLoadingCirculation ? (
           <ActivityIndicator size="small" color={theme.accent} />
         ) : circulationError ? (
@@ -172,6 +200,61 @@ export default function ProfileScreen({ session }) {
           })
         )}
       </View>
+      <View style={{ height: 24 }} />
+
+      {/* My List / Wishlist */}
+      <TouchableOpacity
+        style={[styles.borrowedHeader, { paddingHorizontal: 20 }]}
+        onPress={() => setShowWishlist((v) => !v)}
+      >
+        <Text style={styles.borrowedHeaderTitle}>My List</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.borrowedCount}>{wishlist.length} Saved</Text>
+          <MaterialIcons
+            name={showWishlist ? 'expand-less' : 'expand-more'}
+            size={20}
+            color={theme.accent}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {showWishlist && (
+        <View style={{ paddingHorizontal: 20, marginTop: 14 }}>
+          {wishlist.length === 0 ? (
+            <Text style={styles.emptyText}>No saved books yet. Tap the bookmark icon on any book to save it.</Text>
+          ) : (
+            wishlist.map((book) => (
+              <View key={book.biblio_id} style={[styles.borrowedItem, { marginBottom: 12 }]}>
+                <Image
+                  source={{ uri: coverUrl(book.biblio_id) }}
+                  style={{ width: 44, height: 60, borderRadius: 6, backgroundColor: theme.backgroundSelected }}
+                  resizeMode="cover"
+                />
+                <View style={styles.borrowedTextContainer}>
+                  <Text style={styles.borrowedTitle} numberOfLines={2}>{book.title}</Text>
+                  {book.author ? <Text style={[styles.borrowedDue, { color: theme.textSecondary }]}>{book.author}</Text> : null}
+                </View>
+                <TouchableOpacity
+                  style={styles.renewButton}
+                  onPress={() => router.push({ pathname: '/book-detail', params: { biblioId: book.biblio_id } })}
+                >
+                  <Text style={[styles.renewText, { color: theme.accent }]}>View</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ padding: 8 }}
+                  onPress={async () => {
+                    await removeFromWishlist(book.biblio_id);
+                    setWishlist((prev) => prev.filter((b) => b.biblio_id !== book.biblio_id));
+                  }}
+                >
+                  <MaterialIcons name="close" size={18} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+      )}
+
       <View style={{ height: 10 }} />
       <TouchableOpacity
         style={styles.logoutButton}

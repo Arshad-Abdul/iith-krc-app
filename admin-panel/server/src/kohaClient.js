@@ -93,6 +93,40 @@ export const kohaPost = async (path, body, userid, password) => {
   }
 };
 
+const chunk = (arr, n) =>
+  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+
+export const enrichCheckoutsWithTitles = async (checkouts, userid, password) => {
+  if (!checkouts.length) return checkouts;
+
+  const uniqueItemIds = [...new Set(checkouts.map((c) => c.item_id).filter(Boolean))];
+  const itemMap = {};
+  for (const batch of chunk(uniqueItemIds, 15)) {
+    const results = await Promise.allSettled(batch.map((id) => kohaGet(`/items/${id}`, {}, userid, password)));
+    results.forEach((r, i) => { if (r.status === "fulfilled") itemMap[batch[i]] = r.value; });
+  }
+
+  const uniqueBiblioIds = [...new Set(Object.values(itemMap).map((it) => it.biblio_id).filter(Boolean))];
+  const biblioMap = {};
+  for (const batch of chunk(uniqueBiblioIds, 15)) {
+    const results = await Promise.allSettled(batch.map((id) => kohaGet(`/biblios/${id}`, {}, userid, password)));
+    results.forEach((r, i) => { if (r.status === "fulfilled") biblioMap[batch[i]] = r.value; });
+  }
+
+  return checkouts.map((c) => {
+    const item = itemMap[c.item_id];
+    const biblio = item ? biblioMap[item.biblio_id] : null;
+    return {
+      ...c,
+      title: biblio?.title || null,
+      author: biblio?.author || null,
+      biblio_id: item?.biblio_id || null,
+      barcode: item?.external_id || null,
+      callnumber: item?.callnumber || null,
+    };
+  });
+};
+
 export const kohaDelete = async (path, userid, password) => {
   try {
     await client.delete(path, { headers: authHeader(userid, password) });

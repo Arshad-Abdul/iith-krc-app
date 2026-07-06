@@ -76,3 +76,39 @@ const serviceGet = async (path, params = {}) => {
 export const getCheckouts = (patronId) => serviceGet(`/patrons/${patronId}/checkouts`);
 export const getAccountLines = (patronId) => serviceGet(`/patrons/${patronId}/account`);
 export const getHolds = (patronId) => serviceGet(`/patrons/${patronId}/holds`);
+
+const chunk = (arr, n) =>
+  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+
+// Enriches raw Koha checkout objects with title/author by resolving item → biblio.
+// Does two parallel batched fetch rounds to avoid hammering Koha with N individual calls.
+export const enrichCheckoutsWithTitles = async (checkouts) => {
+  if (!checkouts.length) return checkouts;
+
+  const uniqueItemIds = [...new Set(checkouts.map((c) => c.item_id).filter(Boolean))];
+  const itemMap = {};
+  for (const batch of chunk(uniqueItemIds, 15)) {
+    const results = await Promise.allSettled(batch.map((id) => serviceGet(`/items/${id}`)));
+    results.forEach((r, i) => { if (r.status === "fulfilled") itemMap[batch[i]] = r.value; });
+  }
+
+  const uniqueBiblioIds = [...new Set(Object.values(itemMap).map((it) => it.biblio_id).filter(Boolean))];
+  const biblioMap = {};
+  for (const batch of chunk(uniqueBiblioIds, 15)) {
+    const results = await Promise.allSettled(batch.map((id) => serviceGet(`/biblios/${id}`)));
+    results.forEach((r, i) => { if (r.status === "fulfilled") biblioMap[batch[i]] = r.value; });
+  }
+
+  return checkouts.map((c) => {
+    const item = itemMap[c.item_id];
+    const biblio = item ? biblioMap[item.biblio_id] : null;
+    return {
+      ...c,
+      title: biblio?.title || null,
+      author: biblio?.author || null,
+      biblio_id: item?.biblio_id || null,
+      barcode: item?.external_id || null,
+      callnumber: item?.callnumber || null,
+    };
+  });
+};

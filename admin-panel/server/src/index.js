@@ -1,4 +1,5 @@
 import "dotenv/config";
+import axios from "axios";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -6,7 +7,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   hasSuperlibrarianPermission, kohaDelete, kohaGet,
-  kohaGetWithCount, kohaPost, resolvePatron, KohaError, KohaConflict,
+  kohaGetWithCount, kohaPost, resolvePatron, enrichCheckoutsWithTitles,
+  KohaError, KohaConflict,
 } from "./kohaClient.js";
 import { createSession, destroySession, getSession } from "./sessions.js";
 
@@ -75,13 +77,60 @@ app.get("/api/stats", requireAuth, async (req, res) => {
   }
 });
 
+// ─── App status ──────────────────────────────────────────────────────────────
+
+app.get("/api/status", requireAuth, async (req, res) => {
+  const { userid, password } = req.kohaSession;
+  const ping = async (label, fn) => {
+    const t = Date.now();
+    try { await fn(); return { label, ok: true, ms: Date.now() - t }; }
+    catch (e) { return { label, ok: false, ms: Date.now() - t, error: e.message?.slice(0, 80) }; }
+  };
+
+  const checks = await Promise.all([
+    ping("Koha REST API", () => kohaGet("/config/smtp_servers", {}, userid, password)),
+    ping("Mobile Backend", () => axios.get("http://localhost:4002/api/me", { timeout: 3000 })
+      .catch((e) => { if (e.response) return; throw e; })),
+    ping("OPAC Catalog", () => axios.get("https://opac.krc.iith.ac.in/api/books/recent?limit=1", { timeout: 5000 })),
+    { label: "Admin Panel", ok: true, ms: 0 },
+  ]);
+  res.json(checks);
+});
+
 // ─── Recent checkouts ────────────────────────────────────────────────────────
 
 app.get("/api/recent-checkouts", requireAuth, async (req, res) => {
   try {
     const { userid, password } = req.kohaSession;
-    const data = await kohaGet("/checkouts", { _order_by: "-timestamp", _per_page: 20 }, userid, password);
+    const raw = await kohaGet("/checkouts", { _order_by: "-timestamp", _per_page: 20 }, userid, password);
+    const data = await enrichCheckoutsWithTitles(Array.isArray(raw) ? raw : [], userid, password);
     res.json(data);
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message });
+  }
+});
+
+// ─── Overdues ─────────────────────────────────────────────────────────────────
+
+app.get("/api/overdues", requireAuth, async (req, res) => {
+  try {
+    const { userid, password } = req.kohaSession;
+    const now = new Date().toISOString();
+    const overdues = [];
+    let page = 1;
+    while (overdues.length < 200) {
+      const data = await kohaGet("/checkouts", {
+        _order_by: "due_date", _per_page: 100, _page: page,
+      }, userid, password);
+      if (!Array.isArray(data) || data.length === 0) break;
+      const od = data.filter((c) => c.due_date && c.due_date < now);
+      overdues.push(...od);
+      if (data.some((c) => !c.due_date || c.due_date >= now)) break;
+      if (data.length < 100) break;
+      page++;
+    }
+    const enriched = await enrichCheckoutsWithTitles(overdues.slice(0, 200), userid, password);
+    res.json(enriched);
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message });
   }
@@ -111,11 +160,12 @@ app.get("/api/patrons/search", requireAuth, async (req, res) => {
 app.get("/api/patrons/:id", requireAuth, async (req, res) => {
   try {
     const { userid, password } = req.kohaSession;
-    const [patron, checkouts, account] = await Promise.all([
+    const [patron, rawCheckouts, account] = await Promise.all([
       kohaGet(`/patrons/${req.params.id}`, {}, userid, password),
       kohaGet(`/patrons/${req.params.id}/checkouts`, { _order_by: "-checkout_date", _per_page: 50 }, userid, password),
       kohaGet(`/patrons/${req.params.id}/account`, {}, userid, password),
     ]);
+    const checkouts = await enrichCheckoutsWithTitles(Array.isArray(rawCheckouts) ? rawCheckouts : [], userid, password);
     res.json({ patron, checkouts, account });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message });

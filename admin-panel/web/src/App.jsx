@@ -4,6 +4,8 @@ import Dashboard from "./pages/Dashboard.jsx";
 import IssueReturn from "./pages/IssueReturn.jsx";
 import Login from "./pages/Login.jsx";
 import PatronSearch from "./pages/PatronSearch.jsx";
+import Overdues from "./pages/Overdues.jsx";
+import Catalog from "./pages/Catalog.jsx";
 
 export default function App() {
   const [patron, setPatron] = useState(null);
@@ -34,9 +36,11 @@ export default function App() {
         <div className="header-left">
           <span className="header-logo">KRC Admin</span>
           <nav className="header-nav">
-            <button className={page === "dashboard" ? "nav-active" : ""} onClick={() => setPage("dashboard")}>Dashboard</button>
-            <button className={page === "patrons" ? "nav-active" : ""} onClick={() => setPage("patrons")}>Patrons</button>
+            <button className={page === "dashboard"   ? "nav-active" : ""} onClick={() => setPage("dashboard")}>Dashboard</button>
+            <button className={page === "patrons"     ? "nav-active" : ""} onClick={() => setPage("patrons")}>Patrons</button>
             <button className={page === "circulation" ? "nav-active" : ""} onClick={() => setPage("circulation")}>Issue / Return</button>
+            <button className={page === "overdues"    ? "nav-active" : ""} onClick={() => setPage("overdues")}>Overdues</button>
+            <button className={page === "catalog"     ? "nav-active" : ""} onClick={() => setPage("catalog")}>Catalog</button>
           </nav>
         </div>
         <div className="header-right">
@@ -46,9 +50,11 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {page === "dashboard"    && <Dashboard onNavigate={setPage} />}
-        {page === "patrons"      && <PatronSearch />}
-        {page === "circulation"  && <IssueReturn />}
+        {page === "dashboard"   && <Dashboard onNavigate={setPage} />}
+        {page === "patrons"     && <PatronSearch />}
+        {page === "circulation" && <IssueReturn />}
+        {page === "overdues"    && <Overdues />}
+        {page === "catalog"     && <Catalog />}
       </main>
     </div>
   );
