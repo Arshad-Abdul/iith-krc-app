@@ -1051,20 +1051,15 @@ app.get("/api/occupancy", async (req, res) => {
 
     let totalCapacity = 0;
 
-    // Map main_gate entrance scans to the physical entrance level (First Floor).
-    // Priority: "first floor" > "first" > floors[0]. 
-    // Do NOT match "ground" — that is a separate basement/ground-level area.
-    const entranceFloor =
-      floors.find(f => f.floor_id === "first floor") ||
-      floors.find(f => f.floor_id === "first") ||
-      floors[0];
-    const unassignedGateCount = (countMap["main_gate"] || 0) + (countMap["main"] || 0);
+    // Gate-scan sessions (floor_id = 'main_gate' or 'main') count ONLY in the
+    // overall building total. They are NOT attributed to any specific floor.
+    // Floor breakdown only reflects patrons who explicitly selected a floor
+    // via the digital self check-in (gate session promoted to a real floor).
+    const gateOnlyIds = new Set(["main_gate", "main"]);
 
     const data = floors.map(f => {
-      let occupied = countMap[f.floor_id] || 0;
-      if (entranceFloor && f.floor_id === entranceFloor.floor_id) {
-        occupied += unassignedGateCount;
-      }
+      // Never add gate-only counts to floor breakdown
+      const occupied = gateOnlyIds.has(f.floor_id) ? 0 : (countMap[f.floor_id] || 0);
       totalCapacity += f.total_seats;
       const available = Math.max(0, f.total_seats - occupied);
       const percentage = f.total_seats > 0 ? Math.round((occupied / f.total_seats) * 100) : 0;
