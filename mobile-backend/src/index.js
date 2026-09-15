@@ -2195,6 +2195,16 @@ app.get("/api/admin/overdues", requireLocalAdmin, async (req, res) => {
 });
 
 // Admin Broadcast Notifications
+app.get("/api/admin/broadcast-notifications", requireLocalAdmin, async (req, res) => {
+  try {
+    const db = getDb();
+    const [rows] = await db.query("SELECT * FROM admin_broadcast_notifications ORDER BY created_at DESC LIMIT 50");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/admin/broadcast-notifications", requireLocalAdmin, async (req, res) => {
   const { title, message, target_screen, target_id, sent_by } = req.body;
   if (!title || !message) return res.status(400).json({ error: "Title and message are required." });
@@ -2214,6 +2224,16 @@ app.post("/api/admin/broadcast-notifications", requireLocalAdmin, async (req, re
     }).catch(e => console.warn("[Broadcast Notification] Push dispatch error:", e.message));
 
     res.json({ ok: true, id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/admin/broadcast-notifications/:id", requireLocalAdmin, async (req, res) => {
+  try {
+    const db = getDb();
+    await db.query("DELETE FROM admin_broadcast_notifications WHERE id = ?", [req.params.id]);
+    res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

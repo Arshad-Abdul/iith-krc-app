@@ -94,5 +94,7 @@ export const getAdminOccupancyReport = (params = {}) => {
 export const kioskScan = (data) => req("/admin/occupancy/kiosk", { method: "POST", body: JSON.stringify(data) });
 
 // Broadcast Notifications
+export const getAdminBroadcasts = () => req("/admin/broadcast-notifications");
 export const sendAdminBroadcast = (data) => req("/admin/broadcast-notifications", { method: "POST", body: JSON.stringify(data) });
+export const deleteAdminBroadcast = (id) => req(`/admin/broadcast-notifications/${id}`, { method: "DELETE" });
 

@@ -1,5 +1,5 @@
 export default function AppDownloads() {
-  const buildUrl = "https://expo.dev/accounts/arshadiith/projects/library-app-rn/builds/d7fe2ad2-e658-4a3a-b531-599fc18d4b0d";
+  const buildUrl = "https://expo.dev/accounts/arshadiith/projects/library-app-rn/builds/2239378f-3379-4b5d-b36e-e63ebf7641f1";
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(buildUrl)}`;
 
   return (

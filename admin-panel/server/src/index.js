@@ -396,12 +396,30 @@ app.get("/api/admin/occupancy/patron-photo/:identifier", async (req, res) => {
 });
 
 // Admin Broadcast Notifications
+app.get("/api/admin/broadcast-notifications", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/broadcast-notifications`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
 app.post("/api/admin/broadcast-notifications", requireAuth, async (req, res) => {
   try {
     const { data } = await axios.post(`${MOBILE_BACKEND}/admin/broadcast-notifications`, {
       ...req.body,
       sent_by: `${req.kohaSession.patron?.firstname || ''} ${req.kohaSession.patron?.surname || ''}`.trim() || 'Library Staff',
     });
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/broadcast-notifications/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.delete(`${MOBILE_BACKEND}/admin/broadcast-notifications/${req.params.id}`);
     res.json(data);
   } catch (e) {
     res.status(e.response?.status || 500).json({ error: e.message });
