@@ -64,7 +64,6 @@ export const translations = {
     appearance: "Appearance",
     lightMode: "Light Mode",
     darkMode: "Dark Mode",
-    signOut: "Sign Out",
     language: "Language",
     newArrivals: "New Arrivals",
     trending: "Trending This Month",
@@ -185,10 +184,6 @@ export const translations = {
     noInterestsDesc: "Select your academic & research interests in your profile to see personalized book recommendations.",
     selectInterestsBtn: "Choose Academic Topics",
     allInterests: "All Interests",
-    basedOnYourInterests: "Based on your interests",
-    currentMonth: "Current Month",
-    currentYear: "Current Year",
-    overall: "Overall",
   },
   hi: {
 
@@ -250,7 +245,6 @@ export const translations = {
     appearance: "सजावट",
     lightMode: "लाइट मोड",
     darkMode: "डार्क मोड",
-    signOut: "साइन आउट",
     language: "भाषा",
     newArrivals: "नई पुस्तकें",
     trending: "इस महीने की लोकप्रिय",
@@ -371,10 +365,6 @@ export const translations = {
     noInterestsDesc: "व्यक्तिगत पुस्तक सुझाव देखने के लिए अपनी प्रोफ़ाइल में अपनी शैक्षणिक रुचियां चुनें।",
     selectInterestsBtn: "शैक्षणिक विषय चुनें",
     allInterests: "सभी रुचियां",
-    basedOnYourInterests: "आपकी रुचियों के आधार पर",
-    currentMonth: "इस महीने",
-    currentYear: "इस साल",
-    overall: "समग्र",
   },
   te: {
 
@@ -436,7 +426,6 @@ export const translations = {
     appearance: "అలంకరణ",
     lightMode: "లైట్ మోడ్",
     darkMode: "డార్క్ మోడ్",
-    signOut: "సైన్ అవుట్",
     language: "భాష",
     newArrivals: "కొత్త పుస్తకాలు",
     trending: "ఈ నెల ట్రెండింగ్",

@@ -31,6 +31,7 @@ export default function HomeTab({
   const isWideScreen = width >= 860;
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const currentCategoryObj = PATRON_CATEGORIES.find(c => c.id === leaderboardCategory) || PATRON_CATEGORIES[0];
+  const CARD_WIDTH = Math.min(width - 48, 340);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>

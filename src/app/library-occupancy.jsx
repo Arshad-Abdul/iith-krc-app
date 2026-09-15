@@ -187,7 +187,7 @@ export default function LibraryOccupancyScreen() {
                 </Text>
               </View>
               <Text style={[styles.checkinCardSubtitle, { color: theme.textSecondary }]}>
-                You're in the building! Optionally tell us which floor you're sitting on:
+                {"You're in the building! Optionally tell us which floor you're sitting on:"}
               </Text>
 
               <View style={styles.floorPickerRow}>

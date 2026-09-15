@@ -1950,12 +1950,8 @@ app.post("/api/admin/occupancy/kiosk", requireLocalAdmin, async (req, res) => {
   try {
     const db = getDb();
     
-    // Ensure the fallback facility gate floor exists
-    if (floor_id === "main_gate") {
-      await db.query(
-        "INSERT IGNORE INTO occupancy_floor_config (floor_id, floor_name, total_seats, is_active) VALUES ('main_gate', 'Knowledge Resource Centre (Main Gate)', 500, 1)"
-      );
-    }
+    // Note: main_gate is a terminal facility gate, not a reading floor,
+    // so we never insert it into occupancy_floor_config.
 
     const [patrons] = await getKohaDb().query(
       `SELECT b.borrowernumber, b.firstname, b.surname, b.cardnumber, b.categorycode, 
@@ -2031,6 +2027,15 @@ app.post("/api/admin/occupancy/kiosk", requireLocalAdmin, async (req, res) => {
         [active[0].id]
       );
 
+      const durationMins = updatedSession[0]?.duration_minutes || 0;
+
+      // Dispatch push notification to patron confirming their exit
+      notifyPatron(patron.borrowernumber, {
+        title: "KRC Library Check-out 👋",
+        body: `Gate check-out confirmed for ${patronName}. Visit duration: ${durationMins} min${durationMins === 1 ? '' : 's'}. Have a great day!`,
+        data: { target_screen: "occupancy" }
+      }).catch(err => console.warn("Kiosk checkout push failed:", err.message));
+
       return res.json({ 
         message: "Check-out successful.", 
         action: "checkout", 
@@ -2041,7 +2046,7 @@ app.post("/api/admin/occupancy/kiosk", requireLocalAdmin, async (req, res) => {
         department,
         checkinTime: updatedSession[0]?.checkin_time || checkinDate,
         checkoutTime: updatedSession[0]?.checkout_time || timestamp,
-        durationMinutes: updatedSession[0]?.duration_minutes || 0,
+        durationMinutes: durationMins,
         recent_issued_books,
         older_issued_books,
         all_issued_books: enrichedBooks,
@@ -2057,6 +2062,13 @@ app.post("/api/admin/occupancy/kiosk", requireLocalAdmin, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [patron.borrowernumber, patronName, actualCardnumber, floor_id, recent_issued_books.length, patronCategory, department, JSON.stringify(recent_issued_books)]
       );
+
+      // Dispatch push notification to patron's mobile app asking them which floor they are on
+      notifyPatron(patron.borrowernumber, {
+        title: "Welcome to KRC Library! 🏛️",
+        body: `Gate check-in verified. Tap here to select which floor you are seated on.`,
+        data: { target_screen: "occupancy" }
+      }).catch(err => console.warn("Kiosk checkin push failed:", err.message));
 
       return res.json({ 
         message: "Check-in successful.", 

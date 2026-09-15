@@ -139,7 +139,7 @@ export default function App() {
               <button className={page === "dashboard"     ? "nav-active" : ""} onClick={() => navigateTo("dashboard")}>Dashboard</button>
               <button className={page === "dds"           ? "nav-active" : ""} onClick={() => navigateTo("dds")}>DDS / ILL</button>
               <button className={page === "occupancy"     ? "nav-active" : ""} onClick={() => navigateTo("occupancy")}>Occupancy</button>
-              <button className={page === "broadcasts"    ? "nav-active" : ""} onClick={() => navigateTo("broadcasts")}>Broadcasts</button>
+              <button className={page === "broadcasts"    ? "nav-active" : ""} onClick={() => navigateTo("broadcasts")}>📢 Notifications</button>
               <button className={page === "app-builds"    ? "nav-active" : ""} onClick={() => navigateTo("app-builds")}>App Builds</button>
               <button className={page === "kiosk"         ? "nav-active" : ""} onClick={() => navigateTo("kiosk")}>Kiosk Gate 🔒</button>
               <button className={page === "events"        ? "nav-active" : ""} onClick={() => navigateTo("events")}>Events</button>
@@ -173,7 +173,7 @@ export default function App() {
       <main className="app-main" style={{ padding: page === "kiosk" ? "20px" : undefined }}>
         {page === "dashboard"     && <Dashboard onNavigate={navigateTo} />}
         {page === "dds"           && <DDSManager />}
-        {page === "occupancy"     && <OccupancyManager />}
+        {page === "occupancy"     && <OccupancyManager onNavigate={navigateTo} />}
         {page === "broadcasts"    && <BroadcastNotifications />}
         {page === "app-builds"    && <AppDownloads />}
         {page === "kiosk"         && (

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { getAdminOccupancyFloors, saveAdminOccupancyFloor, deleteAdminOccupancyFloor, getAdminOccupancyReport } from "../api";
 
-export default function OccupancyManager() {
+export default function OccupancyManager({ onNavigate }) {
   const [floors, setFloors] = useState([]);
   const [reportData, setReportData] = useState({ sessions: [], total: 0, totalPages: 1, stats: { totalSessions: 0, activeNow: 0, avgDuration: 0 } });
   const [loading, setLoading] = useState(true);
@@ -231,6 +231,16 @@ export default function OccupancyManager() {
           </p>
         </div>
         <div className="panel-actions">
+          {onNavigate && (
+            <button 
+              onClick={() => onNavigate("broadcasts")} 
+              className="btn-gold"
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+              title="Send push notification or announcement to mobile app patrons"
+            >
+              📢 Send Patron Notification
+            </button>
+          )}
           <button 
             onClick={exportDetailedCsv} 
             className="btn-emerald"
