@@ -134,8 +134,9 @@ export default function LibraryOccupancyScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />}
         >
-          {/* Active Session Banner (if checked in) */}
-          {activeSession ? (
+          {/* ── Gate-first 3-state check-in panel ─────────────────────────────── */}
+          {activeSession && !activeSession.is_gate_only ? (
+            // STATE 3: Checked in on a real floor — show "checked in" banner
             <View
               style={[
                 styles.activeCard,
@@ -148,7 +149,6 @@ export default function LibraryOccupancyScreen() {
                   YOU ARE CURRENTLY CHECKED IN
                 </Text>
               </View>
-
               <Text style={[styles.activeLocation, { color: theme.text }]}>
                 {activeSession.floor_name || 'KRC Library'}
               </Text>
@@ -156,30 +156,38 @@ export default function LibraryOccupancyScreen() {
                 Stay Duration: {formatElapsed(activeSession.checkin_time)} • Checked in at{' '}
                 {new Date(activeSession.checkin_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </Text>
-
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.08)', padding: 12, borderRadius: 10, marginTop: 10 }}>
                 <MaterialIcons name="door-sliding" size={20} color="#10B981" style={{ marginRight: 10 }} />
                 <Text style={{ fontSize: 12, color: theme.textSecondary, flex: 1, lineHeight: 17 }}>
-                  To check out, please scan your ID card or roll number barcode at the physical KRC Exit Kiosk Gate when leaving the library.
+                  To check out, scan your ID card at the physical KRC Exit Kiosk Gate when leaving the library.
                 </Text>
               </View>
             </View>
-          ) : (
-            /* Self Check-in Panel */
+
+          ) : activeSession && activeSession.is_gate_only ? (
+            // STATE 2: Gate scan detected but no floor selected yet — show floor picker
             <View
               style={[
                 styles.checkinCard,
-                { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E2E8F0' },
+                { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: '#10B981', borderWidth: 1.5 },
               ]}
             >
+              {/* Gate detected badge */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 8, alignSelf: 'flex-start' }}>
+                <View style={[styles.pulseDot, { backgroundColor: '#10B981', marginRight: 6 }]} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981' }}>
+                  KIOSK GATE SCAN DETECTED
+                </Text>
+              </View>
+
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <MaterialIcons name="meeting-room" size={22} color={theme.accent} style={{ marginRight: 8 }} />
                 <Text style={[styles.checkinCardTitle, { color: theme.text }]}>
-                  Digital Self Check-in
+                  Which floor are you on?
                 </Text>
               </View>
               <Text style={[styles.checkinCardSubtitle, { color: theme.textSecondary }]}>
-                Entering KRC? Select your floor below to check in:
+                You're in the building! Optionally tell us which floor you're sitting on:
               </Text>
 
               <View style={styles.floorPickerRow}>
@@ -194,10 +202,7 @@ export default function LibraryOccupancyScreen() {
                     ]}
                   >
                     <Text
-                      style={[
-                        styles.floorChipText,
-                        { color: selectedFloor === f.floor_id ? '#FFFFFF' : theme.text },
-                      ]}
+                      style={[styles.floorChipText, { color: selectedFloor === f.floor_id ? '#FFFFFF' : theme.text }]}
                       numberOfLines={1}
                     >
                       {f.floor_name ? f.floor_name.split('(')[0].trim() : 'Unknown'}
@@ -214,11 +219,41 @@ export default function LibraryOccupancyScreen() {
                 {processing ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.checkinBtnText}>Check In on Selected Floor</Text>
+                  <Text style={styles.checkinBtnText}>Confirm My Floor</Text>
                 )}
               </TouchableOpacity>
             </View>
+
+          ) : (
+            // STATE 1: No gate session — show locked state (view only)
+            <View
+              style={[
+                styles.checkinCard,
+                { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E2E8F0' },
+              ]}
+            >
+              <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: isDark ? '#1E293B' : '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <MaterialIcons name="sensors-off" size={26} color={isDark ? '#64748B' : '#94A3B8'} />
+                </View>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: theme.text, textAlign: 'center', marginBottom: 6 }}>
+                  Not Checked In
+                </Text>
+                <Text style={{ fontSize: 13, color: theme.textSecondary, textAlign: 'center', lineHeight: 19, paddingHorizontal: 8 }}>
+                  To use the digital floor tracker, scan your ID card at the{' '}
+                  <Text style={{ fontWeight: '700', color: theme.text }}>physical KRC Kiosk Gate</Text>{' '}
+                  when entering the library.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: isDark ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: isDark ? '#374151' : '#E2E8F0' }}>
+                  <MaterialIcons name="qr-code-scanner" size={16} color={isDark ? '#64748B' : '#94A3B8'} style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 12, color: isDark ? '#64748B' : '#94A3B8', fontWeight: '600' }}>
+                    Gate scan required to unlock floor selection
+                  </Text>
+                </View>
+              </View>
+            </View>
           )}
+          {/* ────────────────────────────────────────────────────────────────── */}
 
           {/* Overall Meter */}
           <View

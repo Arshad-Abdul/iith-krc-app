@@ -1099,15 +1099,23 @@ app.get("/api/occupancy", async (req, res) => {
 app.get("/api/occupancy/my-status", requireAuth, async (req, res) => {
   try {
     const db = getDb();
+    // LEFT JOIN so gate sessions (floor_id = 'main_gate') are returned even
+    // though 'main_gate' is not in occupancy_floor_config.
+    // The app uses the raw floor_id to distinguish gate-only vs floor sessions.
     const [rows] = await db.query(
-      `SELECT s.*, f.floor_name 
+      `SELECT s.*, f.floor_name
        FROM library_occupancy_sessions s
-       JOIN occupancy_floor_config f ON s.floor_id = f.floor_id
-       WHERE s.patron_id = ? AND s.checkout_time IS NULL 
+       LEFT JOIN occupancy_floor_config f ON s.floor_id = f.floor_id
+       WHERE s.patron_id = ? AND s.checkout_time IS NULL
        ORDER BY s.checkin_time DESC LIMIT 1`,
       [(req.session.patron.patron_id || req.session.patron.borrowernumber)]
     );
-    res.json({ active_session: rows[0] || null });
+    const session = rows[0] || null;
+    // Annotate whether this is a raw gate session (no floor selected yet)
+    if (session) {
+      session.is_gate_only = session.floor_id === "main_gate" || session.floor_id === "main";
+    }
+    res.json({ active_session: session });
   } catch (error) {
     res.status(500).json({ error: "Could not fetch occupancy status." });
   }
@@ -1119,23 +1127,39 @@ app.post("/api/occupancy/checkin", requireAuth, async (req, res) => {
   try {
     const db = getDb();
     const p = req.session.patron;
-    const patronName = `${p.firstname || ""} ${p.surname || ""}`.trim() || p.userid;
-    
-    // Auto-checkout any existing session first
-    await db.query(
-      `UPDATE library_occupancy_sessions 
-       SET checkout_time = CURRENT_TIMESTAMP, 
-           duration_minutes = TIMESTAMPDIFF(MINUTE, checkin_time, CURRENT_TIMESTAMP) 
-       WHERE patron_id = ? AND checkout_time IS NULL`,
-      [p.patron_id]
+    const patronId = p.patron_id || p.borrowernumber;
+
+    // ── Gate-first rule ───────────────────────────────────────────────────────
+    // Digital floor selection is only allowed when the physical kiosk gate has
+    // already created an active session for this patron.
+    const [activeSessions] = await db.query(
+      `SELECT session_id, floor_id FROM library_occupancy_sessions
+       WHERE patron_id = ? AND checkout_time IS NULL
+       ORDER BY checkin_time DESC LIMIT 1`,
+      [patronId]
     );
 
-    const [result] = await db.query(
-      `INSERT INTO library_occupancy_sessions (patron_id, patron_name, cardnumber, floor_id)
-       VALUES (?, ?, ?, ?)`,
-      [p.patron_id, patronName, p.cardnumber || "", floor_id]
+    if (activeSessions.length === 0) {
+      return res.status(403).json({
+        error: "Please check in at the physical KRC Kiosk Gate first before selecting a floor.",
+        code: "GATE_CHECKIN_REQUIRED",
+      });
+    }
+
+    const existingSession = activeSessions[0];
+
+    // Promote the existing session (gate or floor) to the newly selected floor.
+    // We UPDATE instead of closing+inserting so the original gate check-in time
+    // is preserved — the patron's total duration stays accurate.
+    await db.query(
+      `UPDATE library_occupancy_sessions
+       SET floor_id = ?
+       WHERE session_id = ?`,
+      [floor_id, existingSession.session_id]
     );
-    res.json({ ok: true, session_id: result.insertId });
+    // ─────────────────────────────────────────────────────────────────────────
+
+    res.json({ ok: true, session_id: existingSession.session_id, floor_id });
   } catch (error) {
     res.status(500).json({ error: "Check-in failed." });
   }
