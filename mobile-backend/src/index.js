@@ -1133,7 +1133,7 @@ app.post("/api/occupancy/checkin", requireAuth, async (req, res) => {
     // Digital floor selection is only allowed when the physical kiosk gate has
     // already created an active session for this patron.
     const [activeSessions] = await db.query(
-      `SELECT session_id, floor_id FROM library_occupancy_sessions
+      `SELECT id, floor_id FROM library_occupancy_sessions
        WHERE patron_id = ? AND checkout_time IS NULL
        ORDER BY checkin_time DESC LIMIT 1`,
       [patronId]
@@ -1154,12 +1154,12 @@ app.post("/api/occupancy/checkin", requireAuth, async (req, res) => {
     await db.query(
       `UPDATE library_occupancy_sessions
        SET floor_id = ?
-       WHERE session_id = ?`,
-      [floor_id, existingSession.session_id]
+       WHERE id = ?`,
+      [floor_id, existingSession.id]
     );
     // ─────────────────────────────────────────────────────────────────────────
 
-    res.json({ ok: true, session_id: existingSession.session_id, floor_id });
+    res.json({ ok: true, session_id: existingSession.id, floor_id });
   } catch (error) {
     res.status(500).json({ error: "Check-in failed." });
   }
