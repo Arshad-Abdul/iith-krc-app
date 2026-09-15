@@ -1,4 +1,5 @@
 import { useState } from "react";
+import krcLogo from "../assets/krc-logo.png";
 
 export default function Login({ onLogin }) {
   const [userid, setUserid] = useState("");
@@ -17,6 +18,9 @@ export default function Login({ onLogin }) {
   return (
     <div className="auth-screen">
       <form className="auth-card" onSubmit={handleSubmit}>
+        <div className="auth-logo-badge">
+          <img src={krcLogo} alt="IITH KRC Logo" className="auth-logo-img" />
+        </div>
         <h1>KRC Admin Panel</h1>
         <p className="auth-subtitle">Superlibrarian access only.</p>
         <label>Koha Staff User ID<input value={userid} onChange={(e) => setUserid(e.target.value)} autoComplete="username" /></label>

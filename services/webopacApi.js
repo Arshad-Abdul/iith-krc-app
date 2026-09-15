@@ -39,9 +39,9 @@ export const getMostBorrowedThisMonth = async (limit = 20) => {
   }
 };
 
-export const searchBooks = async (query, { type, limit = 20 } = {}) => {
+export const searchBooks = async (query, { type, limit = 20, offset = 0 } = {}) => {
   try {
-    const { data } = await client.post("/search", { query, type, limit });
+    const { data } = await client.post("/search", { query, type, limit, offset });
     return data; // { books, total, facets, didYouMean, autoApplied, originalQuery }
   } catch (error) {
     return handle(error, "Search failed.");
@@ -72,5 +72,14 @@ export const getSubjectBooks = async (subjectKey, limit = 4) => {
     return data.books ?? [];
   } catch (error) {
     return handle(error, "Could not load subject books.");
+  }
+};
+
+export const getFacultyPublications = async (limit = 2000) => {
+  try {
+    const { data } = await client.get("/books/faculty-publications", { params: { limit } });
+    return data.books ?? [];
+  } catch (error) {
+    return handle(error, "Could not load faculty publications.");
   }
 };

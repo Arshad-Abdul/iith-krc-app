@@ -34,7 +34,7 @@ const services = [
 ];
 
 export default function LibraryServicesScreen() {
-  const { theme, activeTheme } = useTheme();
+  const { theme, activeTheme, t } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme, activeTheme, insets);
 
@@ -61,10 +61,10 @@ export default function LibraryServicesScreen() {
     <View style={styles.container}>
       <View style={styles.headerSafeArea}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={28} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Library Services</Text>
+          <Text style={styles.headerTitle}>{t.quickAccess || 'Library Services'}</Text>
           <View style={{ width: 44 }} />
         </View>
       </View>
@@ -106,16 +106,13 @@ const createStyles = (theme, activeTheme, insets) => {
       justifyContent: 'center',
       minHeight: 140,
       maxWidth: '46%', // Ensures the odd 5th item doesn't stretch across the entire screen
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0.25 : 0.05,
-      shadowRadius: 6,
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
       elevation: 3,
       borderWidth: isDark ? 1 : 0,
       borderColor: theme.backgroundSelected,
     },
     iconContainer: {
-      backgroundColor: isDark ? 'rgba(212, 160, 23, 0.1)' : 'rgba(212, 160, 23, 0.08)',
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(32, 138, 239, 0.08)',
       padding: 14,
       borderRadius: 50, // Pure circle icon container for premium look
       marginBottom: 12,

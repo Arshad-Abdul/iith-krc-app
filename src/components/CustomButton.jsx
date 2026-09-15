@@ -49,10 +49,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.light.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
     elevation: 4,
   },
   text: {

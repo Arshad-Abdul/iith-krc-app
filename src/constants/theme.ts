@@ -8,24 +8,30 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    primary: '#F8FAFC',
-    secondary: '#F1F5F9',
-    accent: '#D4A017',
-    text: '#0F172A',
-    textSecondary: '#64748B',
-    background: '#F8FAFC',
+    primary: '#FFFFFF', // Clean white
+    secondary: '#F8FAFC', // Slate 50
+    accent: '#3B82F6', // Vibrant Blue
+    text: '#0F172A', // Slate 900
+    textSecondary: '#64748B', // Slate 500
+    background: '#F1F5F9', // Slate 100
     backgroundElement: '#FFFFFF',
-    backgroundSelected: '#E2E8F0',
+    backgroundSelected: '#E2E8F0', // Slate 200
+    border: '#E2E8F0',
+    glass: 'rgba(255, 255, 255, 0.75)',
+    glassBorder: 'rgba(255, 255, 255, 0.2)',
   },
   dark: {
-    primary: '#0F172A',
-    secondary: '#1E293B',
-    accent: '#D4A017',
-    text: '#F8FAFC',
-    textSecondary: '#CBD5E1',
-    background: '#0F172A',
+    primary: '#0F172A', // Slate 900
+    secondary: '#1E293B', // Slate 800
+    accent: '#6366F1', // Indigo 500
+    text: '#F8FAFC', // Slate 50
+    textSecondary: '#94A3B8', // Slate 400
+    background: '#020617', // Slate 950
     backgroundElement: '#1E293B',
-    backgroundSelected: '#334155',
+    backgroundSelected: '#334155', // Slate 700
+    border: '#334155',
+    glass: 'rgba(30, 41, 59, 0.75)',
+    glassBorder: 'rgba(255, 255, 255, 0.1)',
   },
 } as const;
 

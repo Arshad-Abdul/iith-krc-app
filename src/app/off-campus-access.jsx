@@ -1,15 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { useTheme } from '../constants/ThemeContext';
 
 export default function OffCampusAccessScreen() {
-  const { theme, activeTheme } = useTheme();
+  const { theme, activeTheme, t } = useTheme();
   const styles = createStyles(theme, activeTheme);
 
-  const url = 'https://identity.iith.ac.in/';
-  const launchUrl = () => router.push({ pathname: '/web-view', params: { url, title: 'Remote Access Portal' } });
+  const libraryUrl = 'https://library.iith.ac.in/';
+  const identityUrl = 'https://identity.iith.ac.in/';
+
+  const launchUrl = (targetUrl) => {
+    Linking.openURL(targetUrl).catch(err => console.error("Couldn't load page", err));
+  };
 
   return (
     <View style={styles.container}>
@@ -18,22 +22,30 @@ export default function OffCampusAccessScreen() {
       </View>
       <View style={{ height: 32 }} />
       
-      <Text style={styles.title}>Remote Library Access</Text>
+      <Text style={styles.title}>{t.offCampusAccess || 'Off-Campus Access'}</Text>
       <View style={{ height: 16 }} />
       
       <Text style={styles.description}>
-        Access our library resources from anywhere in the world using our secure identity portal. Log in with your institutional credentials to explore digital books, journals, and databases.
+        {t.offCampusDesc || 'Access our library resources, digital books, journals, and databases from anywhere in the world using your institutional credentials.'}
       </Text>
-      <View style={{ height: 48 }} />
+      <View style={{ height: 36 }} />
 
-      <TouchableOpacity style={styles.button} onPress={launchUrl}>
+      <TouchableOpacity style={styles.button} onPress={() => launchUrl(libraryUrl)}>
         <MaterialIcons name="open-in-new" size={20} color="white" style={{ marginRight: 8 }} />
-        <Text style={styles.buttonText}>GO TO IDENTITY PORTAL</Text>
+        <Text style={styles.buttonText}>{t.goToLibraryPortal || 'GO TO LIBRARY PORTAL'}</Text>
       </TouchableOpacity>
+
+      <View style={{ height: 14 }} />
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => launchUrl(identityUrl)}>
+        <MaterialIcons name="security" size={20} color={theme.text} style={{ marginRight: 8 }} />
+        <Text style={[styles.buttonText, { color: theme.text }]}>{t.openIdentityPortal || 'OPEN IDENTITY PORTAL'}</Text>
+      </TouchableOpacity>
+
       <View style={{ height: 24 }} />
 
-      <TouchableOpacity onPress={launchUrl}>
-        <Text style={styles.linkText}>{url}</Text>
+      <TouchableOpacity onPress={() => launchUrl(libraryUrl)}>
+        <Text style={styles.linkText}>{libraryUrl}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -45,7 +57,7 @@ const createStyles = (theme, activeTheme) => {
     container: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background },
     iconContainer: { 
       padding: 24, 
-      backgroundColor: isDark ? 'rgba(212, 160, 23, 0.1)' : 'rgba(212, 160, 23, 0.08)', 
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(32, 138, 239, 0.08)', 
       borderRadius: 100 
     },
     title: { fontSize: 24, fontWeight: 'bold', color: theme.text, textAlign: 'center' },
@@ -60,6 +72,17 @@ const createStyles = (theme, activeTheme) => {
       borderRadius: 15 
     },
     buttonText: { fontSize: 16, fontWeight: 'bold', color: 'white' },
+    secondaryButton: { 
+      width: '100%', 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      backgroundColor: theme.backgroundElement,
+      borderWidth: 1,
+      borderColor: theme.backgroundSelected,
+      paddingVertical: 18, 
+      borderRadius: 15 
+    },
     linkText: { color: theme.accent, textDecorationLine: 'underline' },
   });
 };

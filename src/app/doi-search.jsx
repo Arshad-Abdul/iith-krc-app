@@ -6,7 +6,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../constants/ThemeContext';
 
 export default function DoiSearchScreen() {
-  const { theme, activeTheme } = useTheme();
+  const { theme, activeTheme, t } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = createStyles(theme, activeTheme, insets);
 
@@ -95,10 +95,10 @@ export default function DoiSearchScreen() {
       {/* Header bar */}
       <View style={styles.headerSafeArea}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={28} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>DOI Document Search</Text>
+          <Text style={styles.headerTitle}>{t.doiSearch || 'DOI Document Search'}</Text>
           <View style={{ width: 44 }} />
         </View>
       </View>
@@ -234,10 +234,7 @@ const createStyles = (theme, activeTheme, insets) => {
       borderBottomWidth: 1,
       borderBottomColor: 'rgba(255,255,255,0.05)',
       elevation: 4,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0.25 : 0.1,
-      shadowRadius: 4
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
     },
     backButton: { padding: 4 },
     headerTitle: { color: theme.text, fontSize: 18, fontWeight: 'bold' },
@@ -251,10 +248,7 @@ const createStyles = (theme, activeTheme, insets) => {
       padding: 16,
       borderRadius: 16,
       marginBottom: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0.25 : 0.02,
-      shadowRadius: 6,
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
       elevation: 1,
       borderWidth: 1,
       borderColor: theme.backgroundSelected
@@ -263,7 +257,7 @@ const createStyles = (theme, activeTheme, insets) => {
       width: 44, 
       height: 44, 
       borderRadius: 12, 
-      backgroundColor: isDark ? 'rgba(212,160,23,0.1)' : 'rgba(212,160,23,0.08)', 
+      backgroundColor: isDark ? 'rgba(56,189,248,0.15)' : 'rgba(32,138,239,0.08)', 
       alignItems: 'center', 
       justifyContent: 'center', 
       marginTop: 2 
@@ -277,10 +271,7 @@ const createStyles = (theme, activeTheme, insets) => {
       borderRadius: 18,
       padding: 20,
       marginBottom: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0.25 : 0.03,
-      shadowRadius: 8,
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
       elevation: 2,
       borderWidth: isDark ? 1 : 0,
       borderColor: theme.backgroundSelected
@@ -306,10 +297,7 @@ const createStyles = (theme, activeTheme, insets) => {
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: theme.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
       elevation: 3
     },
     searchBtnText: { color: 'white', fontSize: 14, fontWeight: 'bold' },
@@ -335,10 +323,7 @@ const createStyles = (theme, activeTheme, insets) => {
     resultCard: {
       backgroundColor: theme.backgroundElement,
       borderRadius: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: isDark ? 0.3 : 0.05,
-      shadowRadius: 16,
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)",
       elevation: 4,
       overflow: 'hidden',
       borderWidth: 1,

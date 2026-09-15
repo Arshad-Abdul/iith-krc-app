@@ -5,10 +5,12 @@ import { router } from 'expo-router';
 import { useTheme } from '../constants/ThemeContext';
 
 export default function InstitutionalResourcesScreen() {
-  const { theme, activeTheme } = useTheme();
+  const { theme, activeTheme, t } = useTheme();
   const styles = createStyles(theme, activeTheme);
 
-  const launchUrl = (url, title) => router.push({ pathname: '/web-view', params: { url, title } });
+  const launchUrl = (url, title) => {
+    router.push({ pathname: '/web-view', params: { url, title } });
+  };
 
   const ResourceBox = ({ title, url, icon, color }) => (
     <TouchableOpacity style={styles.resourceBox} onPress={() => launchUrl(url, title)} activeOpacity={0.8}>
@@ -21,7 +23,7 @@ export default function InstitutionalResourcesScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Resources</Text>
+      <Text style={styles.title}>{t.institutionalResources || t.resources || 'Institutional Resources'}</Text>
       <View style={{ height: 15 }} />
       
       <ResourceBox 
@@ -61,14 +63,11 @@ const createStyles = (theme, activeTheme) => {
       paddingVertical: 18, 
       paddingHorizontal: 16, 
       borderRadius: 12, 
-      shadowColor: '#000', 
-      shadowOffset: { width: 0, height: 4 }, 
-      shadowOpacity: isDark ? 0.25 : 0.04, 
-      shadowRadius: 8, 
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)", 
       elevation: 2,
       borderWidth: isDark ? 1 : 0,
       borderColor: theme.backgroundSelected,
     },
-    resourceTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: theme.text },
+    resourceTitle: { flex: 1, fontSize: 16, fontWeight: 'bold', color: theme.text },
   });
 };

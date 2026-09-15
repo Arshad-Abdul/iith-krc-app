@@ -3,58 +3,58 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../constants/ThemeContext';
 
 export default function LibraryHoursScreen() {
-  const { theme, activeTheme } = useTheme();
+  const { theme, activeTheme, t } = useTheme();
   const styles = createStyles(theme, activeTheme);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>KRC Opening Hours</Text>
-      <View style={{ height: 20 }} />
+      <Text style={styles.title}>{t.libraryHoursTitle || 'Library Timing Schedule'}</Text>
+      <View style={{ height: 16 }} />
 
       <View style={styles.table}>
         <View style={[styles.row, styles.headerRow]}>
-          <Text style={[styles.cell, styles.headerCell, { flex: 3 }]}>Name of the Service</Text>
-          <Text style={[styles.cell, styles.headerCell, { flex: 2 }]}>Timings</Text>
+          <Text style={[styles.cell, styles.headerCell, { flex: 3 }]}>{t.locationOrSection || 'Location / Section'}</Text>
+          <Text style={[styles.cell, styles.headerCell, { flex: 2 }]}>{t.timings || 'Timings'}</Text>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Monday to Friday</Text>
+          <Text style={styles.sectionHeaderText}>{t.mondayToFriday || 'Monday to Friday'}</Text>
         </View>
 
         <View style={styles.row}>
-          <Text style={[styles.cell, { flex: 3 }]}>All Reading Areas</Text>
+          <Text style={[styles.cell, { flex: 3 }]}>{t.allReadingAreas || 'All Reading Areas'}</Text>
           <Text style={[styles.cell, styles.timingCell, { flex: 2 }]}>9:00 AM - 1:50 AM</Text>
         </View>
         <View style={styles.row}>
-          <Text style={[styles.cell, { flex: 3 }]}>Ground Floor (after 1:50 AM)</Text>
+          <Text style={[styles.cell, { flex: 3 }]}>{t.groundFloor || 'Ground Floor (after 1:50 AM)'}</Text>
           <Text style={[styles.cell, styles.timingCell, { flex: 2 }]}>24x5*</Text>
         </View>
         <View style={styles.row}>
-          <Text style={[styles.cell, { flex: 3 }]}>Circulation Section</Text>
+          <Text style={[styles.cell, { flex: 3 }]}>{t.circulationSection || 'Circulation Section'}</Text>
           <Text style={[styles.cell, styles.timingCell, { flex: 2 }]}>9:00 AM - 8:30 PM</Text>
         </View>
         <View style={styles.row}>
-          <Text style={[styles.cell, { flex: 3 }]}>Learning commons (Lab-1)</Text>
+          <Text style={[styles.cell, { flex: 3 }]}>{t.learningCommons || 'Learning commons (Lab-1)'}</Text>
           <Text style={[styles.cell, styles.timingCell, { flex: 2 }]}>9:00 AM - 11:00 PM</Text>
         </View>
         <View style={styles.row}>
-          <Text style={[styles.cell, { flex: 3 }]}>Research Commons (Lab-2)</Text>
+          <Text style={[styles.cell, { flex: 3 }]}>{t.researchCommons || 'Research Commons (Lab-2)'}</Text>
           <Text style={[styles.cell, styles.timingCell, { flex: 2 }]}>9:00 AM - 8:30 PM</Text>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>Weekend & Holidays</Text>
+          <Text style={styles.sectionHeaderText}>{t.weekendHolidays || 'Weekend & Holidays'}</Text>
         </View>
 
         <View style={[styles.row, { borderBottomWidth: 0 }]}>
-          <Text style={[styles.cell, { flex: 3 }]}>All Reading Areas</Text>
+          <Text style={[styles.cell, { flex: 3 }]}>{t.allReadingAreas || 'All Reading Areas'}</Text>
           <Text style={[styles.cell, styles.timingCell, { flex: 2 }]}>9:00 AM - 2:00 AM</Text>
         </View>
       </View>
 
       <View style={{ height: 20 }} />
       <Text style={styles.footerText}>
-        *On every Saturday and Sunday library will be closed between 6:30 AM to 09:00 AM
+        {t.libraryClosedNote || '*On every Saturday and Sunday library will be closed between 6:30 AM to 09:00 AM'}
       </Text>
     </ScrollView>
   );
@@ -70,10 +70,7 @@ const createStyles = (theme, activeTheme) => {
       backgroundColor: theme.backgroundElement, 
       borderRadius: 12, 
       overflow: 'hidden', 
-      shadowColor: '#000', 
-      shadowOffset: { width: 0, height: 5 }, 
-      shadowOpacity: isDark ? 0.3 : 0.05, 
-      shadowRadius: 10, 
+      boxShadow: "0px 4px 12px rgba(0,0,0,0.05)", 
       elevation: 2,
       borderWidth: isDark ? 1 : 0,
       borderColor: theme.backgroundSelected,

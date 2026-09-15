@@ -8,7 +8,10 @@
     "scheme": "krciith",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "associatedDomains": [
+        "applinks:opac.krc.iith.ac.in"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -18,11 +21,28 @@
         "monochromeImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.arshadiith.libraryapprn"
+      "package": "com.arshadiith.libraryapprn",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "opac.krc.iith.ac.in",
+              "pathPrefix": "/book"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.ico"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -36,7 +56,9 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

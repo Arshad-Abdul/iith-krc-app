@@ -17,6 +17,7 @@ const WEB_DIST = path.join(__dirname, "../../web/dist");
 
 const app = express();
 const PORT = process.env.PORT || 4001;
+const MOBILE_BACKEND = process.env.MOBILE_BACKEND_URL || "http://localhost:4002/api";
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
@@ -27,8 +28,8 @@ app.use((req, _res, next) => {
   next();
 });
 
-const requireAuth = (req, res, next) => {
-  const session = getSession(req.cookies.admin_session);
+const requireAuth = async (req, res, next) => {
+  const session = await getSession(req.cookies.admin_session);
   if (!session) return res.status(401).json({ error: "Not authenticated." });
   req.kohaSession = session;
   next();
@@ -43,16 +44,16 @@ app.post("/api/auth/login", async (req, res) => {
     const patron = await resolvePatron(userid, password);
     const isSuper = await hasSuperlibrarianPermission(patron.patron_id, userid, password);
     if (!isSuper) return res.status(403).json({ error: "This account does not have superlibrarian access." });
-    const sessionId = createSession({ userid, password, patron });
-    res.cookie("admin_session", sessionId, { httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 1000 });
+    const sessionId = await createSession({ userid, password, patron });
+    res.cookie("admin_session", sessionId, { httpOnly: true, sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 });
     return res.json({ patron });
   } catch (error) {
     return res.status(error instanceof KohaError ? error.status : 502).json({ error: error.message });
   }
 });
 
-app.post("/api/auth/logout", (req, res) => {
-  destroySession(req.cookies.admin_session);
+app.post("/api/auth/logout", async (req, res) => {
+  await destroySession(req.cookies.admin_session);
   res.clearCookie("admin_session");
   res.json({ ok: true });
 });
@@ -110,29 +111,14 @@ app.get("/api/recent-checkouts", requireAuth, async (req, res) => {
   }
 });
 
-// ─── Overdues ─────────────────────────────────────────────────────────────────
+// ─── Overdues (Full Koha DB with Patron Metadata & Rich Filters) ───────────────
 
 app.get("/api/overdues", requireAuth, async (req, res) => {
   try {
-    const { userid, password } = req.kohaSession;
-    const now = new Date().toISOString();
-    const overdues = [];
-    let page = 1;
-    while (overdues.length < 200) {
-      const data = await kohaGet("/checkouts", {
-        _order_by: "due_date", _per_page: 100, _page: page,
-      }, userid, password);
-      if (!Array.isArray(data) || data.length === 0) break;
-      const od = data.filter((c) => c.due_date && c.due_date < now);
-      overdues.push(...od);
-      if (data.some((c) => !c.due_date || c.due_date >= now)) break;
-      if (data.length < 100) break;
-      page++;
-    }
-    const enriched = await enrichCheckoutsWithTitles(overdues.slice(0, 200), userid, password);
-    res.json(enriched);
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/overdues`, { params: req.query });
+    res.json(data);
   } catch (e) {
-    res.status(e.status || 502).json({ error: e.message });
+    res.status(e.response?.status || 500).json(e.response?.data || { error: e.message });
   }
 });
 
@@ -210,14 +196,215 @@ app.post("/api/return", requireAuth, async (req, res) => {
   }
 });
 
-// ─── App activity (proxied from mobile-backend) ──────────────────────────────
+// ─── App activity & Content Management (proxied from mobile-backend) ──────────
 
 app.get("/api/app-activity", requireAuth, async (req, res) => {
   try {
-    const { data } = await axios.get("http://localhost:4002/api/admin/activity", { timeout: 3000 });
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/activity`, { timeout: 3000 });
     res.json(data);
   } catch (e) {
     res.status(502).json({ error: "Could not reach mobile backend." });
+  }
+});
+
+// Events
+app.get("/api/events", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/events`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.post("/api/events", requireAuth, async (req, res) => {
+  try {
+    const staffName = `${req.kohaSession.patron?.firstname || ""} ${req.kohaSession.patron?.surname || ""}`.trim() || req.kohaSession.userid;
+    const { data } = await axios.post(`${MOBILE_BACKEND}/admin/events`, { ...req.body, created_by: staffName });
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.response?.data?.error || e.message });
+  }
+});
+
+app.put("/api/events/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.put(`${MOBILE_BACKEND}/admin/events/${req.params.id}`, req.body);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.response?.data?.error || e.message });
+  }
+});
+
+app.delete("/api/events/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.delete(`${MOBILE_BACKEND}/admin/events/${req.params.id}`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.response?.data?.error || e.message });
+  }
+});
+
+// App Content: Reviews, Clubs, Recommendations, Shelves
+app.get("/api/admin/reviews", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/reviews`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/reviews/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.delete(`${MOBILE_BACKEND}/admin/reviews/${req.params.id}`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.get("/api/admin/club-messages", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/club-messages`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/club-messages/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.delete(`${MOBILE_BACKEND}/admin/club-messages/${req.params.id}`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.get("/api/admin/recommendations", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/recommendations`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.get("/api/admin/professor-shelves", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/professor-shelves`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+// Admin DDS / ILL
+app.get("/api/admin/dds", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/dds`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.put("/api/admin/dds/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.put(`${MOBILE_BACKEND}/admin/dds/${req.params.id}`, req.body);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/admin/dds/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.delete(`${MOBILE_BACKEND}/admin/dds/${req.params.id}`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
+  }
+});
+
+// Admin Occupancy
+app.get("/api/admin/occupancy/floors", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/occupancy/floors`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.response?.data?.error || e.message });
+  }
+});
+
+app.post("/api/admin/occupancy/floors", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.post(`${MOBILE_BACKEND}/admin/occupancy/floors`, req.body);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.response?.data?.error || e.message });
+  }
+});
+
+app.delete("/api/admin/occupancy/floors/:id", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.delete(`${MOBILE_BACKEND}/admin/occupancy/floors/${req.params.id}`);
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.response?.data?.error || e.message });
+  }
+});
+
+app.get("/api/admin/occupancy/report", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.get(`${MOBILE_BACKEND}/admin/occupancy/report`, { params: req.query });
+    res.json(data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json(error.response?.data || { error: "Failed to get occupancy report." });
+  }
+});
+
+app.post("/api/admin/occupancy/kiosk", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.post(`${MOBILE_BACKEND}/admin/occupancy/kiosk`, req.body);
+    res.json(data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json(error.response?.data || { error: "Failed to scan kiosk." });
+  }
+});
+
+// Stream patron photo from Koha via mobile-backend
+app.get("/api/admin/occupancy/patron-photo/:identifier", async (req, res) => {
+  try {
+    const response = await axios.get(
+      `${MOBILE_BACKEND}/patron-photo/${encodeURIComponent(req.params.identifier)}`,
+      {
+        responseType: "arraybuffer",
+        validateStatus: (status) => status < 500
+      }
+    );
+    if (response.status === 200) {
+      res.setHeader("Content-Type", response.headers["content-type"] || "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.send(response.data);
+    }
+    return res.status(response.status).send(response.data);
+  } catch (e) {
+    return res.status(404).send("Photo not found");
+  }
+});
+
+// Admin Broadcast Notifications
+app.post("/api/admin/broadcast-notifications", requireAuth, async (req, res) => {
+  try {
+    const { data } = await axios.post(`${MOBILE_BACKEND}/admin/broadcast-notifications`, {
+      ...req.body,
+      sent_by: `${req.kohaSession.patron?.firstname || ''} ${req.kohaSession.patron?.surname || ''}`.trim() || 'Library Staff',
+    });
+    res.json(data);
+  } catch (e) {
+    res.status(e.response?.status || 500).json({ error: e.message });
   }
 });
 
@@ -227,3 +414,4 @@ app.use(express.static(WEB_DIST));
 app.get("*", (_req, res) => res.sendFile(path.join(WEB_DIST, "index.html")));
 
 app.listen(PORT, () => console.log(`KRC admin panel listening on http://localhost:${PORT}`));
+
