@@ -1025,6 +1025,19 @@ app.delete("/api/dds/:id", requireAuth, async (req, res) => {
   }
 });
 
+// ─── Public Library Events & Exhibitions ─────────────────────────────────────
+app.get("/api/events", async (req, res) => {
+  try {
+    const db = getDb();
+    const [rows] = await db.query(
+      "SELECT * FROM library_events WHERE is_active = 1 ORDER BY event_date ASC"
+    );
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch events." });
+  }
+});
+
 // ─── Library Floor Occupancy Meter & Self Gate ───────────────────────────────
 
 app.get("/api/occupancy", async (req, res) => {
