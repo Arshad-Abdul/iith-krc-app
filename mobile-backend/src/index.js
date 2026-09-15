@@ -1051,8 +1051,13 @@ app.get("/api/occupancy", async (req, res) => {
 
     let totalCapacity = 0;
 
-    // Map main gate entrance scans to the entrance level (First Floor)
-    const entranceFloor = floors.find(f => f.floor_id === "first floor" || f.floor_id === "first" || f.floor_id === "ground") || floors[0];
+    // Map main_gate entrance scans to the physical entrance level (First Floor).
+    // Priority: "first floor" > "first" > floors[0]. 
+    // Do NOT match "ground" — that is a separate basement/ground-level area.
+    const entranceFloor =
+      floors.find(f => f.floor_id === "first floor") ||
+      floors.find(f => f.floor_id === "first") ||
+      floors[0];
     const unassignedGateCount = (countMap["main_gate"] || 0) + (countMap["main"] || 0);
 
     const data = floors.map(f => {
