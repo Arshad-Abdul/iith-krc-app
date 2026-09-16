@@ -17,7 +17,7 @@ const daysUntil = (dateString) => {
 };
 
 export default function ProfileScreen({ session }) {
-  const { theme, activeTheme } = useTheme();
+  const { theme, activeTheme, t } = useTheme();
   const styles = createStyles(theme, activeTheme);
 
   const [checkouts, setCheckouts] = useState([]);
@@ -650,17 +650,30 @@ export default function ProfileScreen({ session }) {
 
       {/* Reading / Checkout History Section */}
       <View style={{ height: 24 }} />
-      <View style={[styles.borrowedHeader, { paddingHorizontal: 20 }]}>
-        <Text style={styles.borrowedHeaderTitle}>Reading History</Text>
-        <Text style={styles.borrowedCount}>{history.length} Books</Text>
+      <View style={[styles.borrowedHeader, { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={styles.borrowedHeaderTitle}>{t.readingHistory || 'Reading History'}</Text>
+          <View style={{ backgroundColor: activeTheme === 'dark' ? 'rgba(32,138,239,0.15)' : '#EFF6FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: theme.accent }}>{history.length}</Text>
+          </View>
+        </View>
+        {history.length > 5 && (
+          <TouchableOpacity
+            onPress={() => router.push('/reading-history')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '600', color: theme.accent }}>{t.viewAll || 'View All'}</Text>
+            <MaterialIcons name="arrow-forward" size={15} color={theme.accent} />
+          </TouchableOpacity>
+        )}
       </View>
       <View style={{ height: 16 }} />
       
       {history.length === 0 ? (
-        <Text style={styles.emptyText}>No checkout history records found.</Text>
+        <Text style={styles.emptyText}>{t.noCheckoutHistory || 'No checkout history records found.'}</Text>
       ) : (
         <View style={styles.historyContainer}>
-          {history.map((item, index) => (
+          {history.slice(0, 5).map((item, index) => (
             <TouchableOpacity
               key={item.issue_id ?? item.checkout_id ?? index}
               style={styles.historyItem}
@@ -688,6 +701,31 @@ export default function ProfileScreen({ session }) {
               <MaterialIcons name="chevron-right" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
           ))}
+
+          {history.length > 5 && (
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 14,
+                marginTop: 6,
+                backgroundColor: theme.backgroundElement,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: activeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
+                gap: 8,
+              }}
+              onPress={() => router.push('/reading-history')}
+              activeOpacity={0.75}
+            >
+              <MaterialIcons name="history" size={18} color={theme.accent} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.accent }}>
+                View Full Reading History ({history.length} Books)
+              </Text>
+              <MaterialIcons name="arrow-forward" size={16} color={theme.accent} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 

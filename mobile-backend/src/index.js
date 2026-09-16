@@ -1497,20 +1497,6 @@ app.post("/api/me/interests", requireAuth, async (req, res) => {
   }
 });
 
-// ─── Library Events (Public Read) ────────────────────────────────────────────
-
-app.get("/api/events", async (req, res) => {
-  try {
-    const db = getDb();
-    const [rows] = await db.query(
-      "SELECT * FROM library_events WHERE is_active = 1 ORDER BY event_date ASC"
-    );
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: "Could not retrieve events." });
-  }
-});
-
 // ─── Admin Endpoints (Localhost Only for Admin Panel) ─────────────────────────
 
 app.get("/api/admin/activity", requireLocalAdmin, async (req, res) => {

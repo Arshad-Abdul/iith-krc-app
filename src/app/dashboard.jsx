@@ -103,7 +103,7 @@ export default function DashboardScreen() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [leaderboardCategory, setLeaderboardCategory] = useState('ALL');
   const [leaderboardPeriod, setLeaderboardPeriod] = useState('month');
-  const [eventsList, setEventsList] = useState(newsItems);
+  const [eventsList, setEventsList] = useState([]);
   const [offlineMode, setOfflineMode] = useState(false);
 
   const handleLanguageChange = async (lang) => {
@@ -209,7 +209,7 @@ export default function DashboardScreen() {
           registerForPushNotificationsAsync(stored.token).catch(() => {});
         }
 
-        if (Array.isArray(liveEvents) && liveEvents.length > 0) {
+        if (Array.isArray(liveEvents)) {
           const formatted = liveEvents.map(e => ({
             id: String(e.id),
             title: e.title,
@@ -235,6 +235,7 @@ export default function DashboardScreen() {
           allSubjects,
           readNext,
           leaderboardData,
+          events: liveEvents,
         };
         await AsyncStorage.setItem('krc_catalog_highlights_cache', JSON.stringify(cachePayload));
         setOfflineMode(false);
@@ -251,6 +252,18 @@ export default function DashboardScreen() {
             setSubjectsList(cached.allSubjects || []);
             setReadNextBooks(cached.readNext || []);
             setLeaderboard(cached.leaderboardData || []);
+            if (Array.isArray(cached.events)) {
+              const formatted = cached.events.map(e => ({
+                id: String(e.id),
+                title: e.title,
+                date: e.event_date ? new Date(e.event_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + (e.event_time ? ' • ' + e.event_time : '') : 'Upcoming',
+                description: e.description || '',
+                link: e.cover_image_url || 'https://library.iith.ac.in',
+                location: e.location || 'KRC IITH',
+                type: e.event_type || 'other'
+              }));
+              setEventsList(formatted);
+            }
           }
         } catch {}
       }

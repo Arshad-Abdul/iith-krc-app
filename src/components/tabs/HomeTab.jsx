@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, Image, useWindowDimensions, Linking } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { router } from 'expo-router';
 import { coverUrl } from '../../../services/webopacApi';
 import { useTheme } from '../../constants/ThemeContext';
@@ -32,6 +34,12 @@ export default function HomeTab({
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const currentCategoryObj = PATRON_CATEGORIES.find(c => c.id === leaderboardCategory) || PATRON_CATEGORIES[0];
   const CARD_WIDTH = Math.min(width - 48, 340);
+
+  const handleOpenSocial = (url) => {
+    Linking.openURL(url).catch((err) => {
+      console.warn('Could not open social URL:', err);
+    });
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -559,6 +567,135 @@ export default function HomeTab({
           theme={theme}
           activeTheme={activeTheme}
         />
+      </View>
+
+      {/* Social Media Links */}
+      <View style={{ alignItems: 'center', marginTop: 32, marginBottom: 8, paddingHorizontal: 20 }}>
+        <Text style={{
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.textSecondary,
+          marginBottom: 16,
+          letterSpacing: 0.5,
+        }}>
+          {t.followUs || "Follow us on"}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          {/* YouTube */}
+          <TouchableOpacity
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: theme.backgroundElement,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: activeTheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+            }}
+            onPress={() => handleOpenSocial('https://www.youtube.com/@IITHyderabadofficial')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="youtube-play" size={20} color="#FF0000" />
+          </TouchableOpacity>
+
+          {/* X (formerly Twitter) */}
+          <TouchableOpacity
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: theme.backgroundElement,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: activeTheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+            }}
+            onPress={() => handleOpenSocial('https://x.com/IITHyderabad')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome6 name="x-twitter" size={18} color={activeTheme === 'dark' ? '#FFFFFF' : '#0F1419'} />
+          </TouchableOpacity>
+
+          {/* Instagram */}
+          <TouchableOpacity
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: theme.backgroundElement,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: activeTheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+            }}
+            onPress={() => handleOpenSocial('https://www.instagram.com/iithyderabad/')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="instagram" size={20} color="#E4405F" />
+          </TouchableOpacity>
+
+          {/* Facebook */}
+          <TouchableOpacity
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: theme.backgroundElement,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: activeTheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+            }}
+            onPress={() => handleOpenSocial('https://www.facebook.com/iithyderabad')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="facebook" size={20} color="#1877F2" />
+          </TouchableOpacity>
+
+          {/* LinkedIn */}
+          <TouchableOpacity
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: theme.backgroundElement,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: activeTheme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 4,
+            }}
+            onPress={() => handleOpenSocial('https://www.linkedin.com/school/iithyderabad/')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="linkedin" size={20} color="#0A66C2" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={{ height: 100 }} />
