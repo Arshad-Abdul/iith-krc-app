@@ -407,7 +407,13 @@ export default function DashboardScreen() {
     setCatalogSearchError('');
     try {
       const limit = 20;
-      const data = await searchBooks(query, { type, limit, offset });
+      let cleanQuery = (query || '').trim();
+      if (type === 'bc') {
+        cleanQuery = cleanQuery.toUpperCase();
+      } else if (type === 'isbn') {
+        cleanQuery = cleanQuery.replace(/[^0-9X]/gi, '');
+      }
+      const data = await searchBooks(cleanQuery, { type, limit, offset });
       const results = data.books ?? [];
       setCatalogResults(results);
 
@@ -692,6 +698,7 @@ export default function DashboardScreen() {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             searchType={searchType}
+            setSearchType={setSearchType}
             setIsTypeModalVisible={setIsTypeModalVisible}
             getSelectedType={getSelectedType}
             handleClearSearch={handleClearSearch}

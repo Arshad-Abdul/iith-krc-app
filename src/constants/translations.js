@@ -184,7 +184,6 @@ export const translations = {
     noInterestsDesc: "Select your academic & research interests in your profile to see personalized book recommendations.",
     selectInterestsBtn: "Choose Academic Topics",
     allInterests: "All Interests",
-    followUs: "Follow us on",
   },
   hi: {
 
@@ -366,7 +365,6 @@ export const translations = {
     noInterestsDesc: "व्यक्तिगत पुस्तक सुझाव देखने के लिए अपनी प्रोफ़ाइल में अपनी शैक्षणिक रुचियां चुनें।",
     selectInterestsBtn: "शैक्षणिक विषय चुनें",
     allInterests: "सभी रुचियां",
-    followUs: "हमसे जुड़ें",
   },
   te: {
 
@@ -548,7 +546,6 @@ export const translations = {
     noInterestsDesc: "వ్యక్తిగతీకరించిన పుస్తక సూచనలను చూడటానికి మీ ప్రొఫైల్‌లో మీ పరిశోధన ఆసక్తులను ఎంచుకోండి.",
     selectInterestsBtn: "విద్యా విషయాలను ఎంచుకోండి",
     allInterests: "అన్ని ఆసక్తులు",
-    followUs: "మాతో కనెక్ట్ అవ్వండి",
   }
 };
 

@@ -47,26 +47,41 @@ export default function OcrScannerScreen() {
   }
 
   const handleBarCodeScanned = async ({ type, data }) => {
-    if (scanned) return;
+    if (scanned || isSearching) return;
     setScanned(true);
-    await lookupIsbn(data);
+    await lookupBarcodeOrIsbn(data);
   };
 
-  const lookupIsbn = async (isbn) => {
+  const lookupBarcodeOrIsbn = async (rawCode) => {
+    if (!rawCode || !rawCode.trim()) return;
     setIsSearching(true);
     setErrorMsg('');
+    const code = rawCode.trim();
+
     try {
-      const cleanIsbn = isbn.trim().replace(/[^0-9X]/gi, '');
-      const results = await searchBooks(cleanIsbn, { type: 'isbn', limit: 1 });
-      const book = results.books?.[0];
+      // 1. Try querying as Accession Number (Barcode 'bc' in Koha)
+      // Keeps prefixes like 'G' in 'G13131'
+      const cleanBc = code.toUpperCase();
+      let results = await searchBooks(cleanBc, { type: 'bc', limit: 5 });
+      let book = results?.books?.find((b) => b?.biblio_id);
+
+      // 2. If not found, try as ISBN (for publisher barcodes on book back)
+      if (!book) {
+        const cleanIsbn = code.replace(/[^0-9X]/gi, '');
+        if (cleanIsbn.length >= 8) {
+          results = await searchBooks(cleanIsbn, { type: 'isbn', limit: 5 });
+          book = results?.books?.find((b) => b?.biblio_id);
+        }
+      }
+
       if (book?.biblio_id) {
         router.replace({ pathname: '/book-detail', params: { biblioId: book.biblio_id } });
       } else {
-        setErrorMsg(`Book with ISBN ${cleanIsbn} not found in KRC catalog.`);
+        setErrorMsg(`Book with code "${code}" not found in KRC catalog.`);
         setScanned(false);
       }
-    } catch (err) {
-      setErrorMsg('Could not query catalog server.');
+    } catch (_err) {
+      setErrorMsg('Could not query catalog server. Please try again.');
       setScanned(false);
     } finally {
       setIsSearching(false);
@@ -111,19 +126,20 @@ export default function OcrScannerScreen() {
 
         {/* Manual Input Backup */}
         <View style={[styles.manualPanel, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#1F2937' : '#E2E8F0' }]}>
-          <Text style={[styles.manualTitle, { color: theme.text }]}>Or enter ISBN manually</Text>
+          <Text style={[styles.manualTitle, { color: theme.text }]}>Or enter Accession No / ISBN manually</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={[styles.input, { backgroundColor: isDark ? '#090D16' : '#F8FAFC', color: theme.text, borderColor: theme.accent }]}
-              placeholder="ISBN-10 or ISBN-13..."
+              placeholder="e.g. G13131 or 9780131103627"
               placeholderTextColor={theme.textSecondary}
               value={manualIsbn}
               onChangeText={setManualIsbn}
-              keyboardType="number-pad"
+              autoCapitalize="characters"
+              autoCorrect={false}
             />
             <TouchableOpacity
               style={[styles.searchBtn, { backgroundColor: theme.accent }]}
-              onPress={() => lookupIsbn(manualIsbn)}
+              onPress={() => lookupBarcodeOrIsbn(manualIsbn)}
               disabled={isSearching}
             >
               {isSearching ? (

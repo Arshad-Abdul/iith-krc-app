@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as ScreenCapture from 'expo-screen-capture';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -38,6 +39,18 @@ export default function ProfileScreen({ session }) {
   useEffect(() => {
     getWishlist().then(setWishlist).catch(() => {});
   }, []);
+
+  // Prevent screenshots & screen recording while Digital ID QR / Barcode is visible
+  useEffect(() => {
+    if (isQrModalVisible) {
+      ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+    } else {
+      ScreenCapture.allowScreenCaptureAsync().catch(() => {});
+    }
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync().catch(() => {});
+    };
+  }, [isQrModalVisible]);
 
   const loadProfileData = async (forceFresh = false) => {
     if (!session?.token) {
@@ -351,7 +364,13 @@ export default function ProfileScreen({ session }) {
             </View>
             <View style={{ height: 16 }} />
             <Text style={styles.qrModalNotice}>Scan at KRC Circulation Desk or Self-Kiosk</Text>
-            <View style={{ height: 24 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, gap: 6 }}>
+              <MaterialIcons name="security" size={14} color={theme.textSecondary} />
+              <Text style={{ fontSize: 11, color: theme.textSecondary, fontWeight: '500' }}>
+                Protected Digital ID • Screenshots blocked
+              </Text>
+            </View>
+            <View style={{ height: 20 }} />
             
             <TouchableOpacity 
               style={styles.closeQrBtn}

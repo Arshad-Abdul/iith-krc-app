@@ -4,7 +4,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { coverUrl } from '../../../services/webopacApi';
 import { useTheme } from '../../constants/ThemeContext';
-import { translations } from '../../constants/translations';
 
 export default function SearchTab({
   currentLanguage = 'en',
@@ -13,6 +12,7 @@ export default function SearchTab({
   searchQuery,
   setSearchQuery,
   searchType,
+  setSearchType,
   setIsTypeModalVisible,
   getSelectedType,
   handleClearSearch,
@@ -26,7 +26,7 @@ export default function SearchTab({
   searchHistory,
   clearSearchHistory,
 }) {
-  const { theme, activeTheme, t } = useTheme();
+  const { theme, t } = useTheme();
 
   return (
     <ScrollView contentContainerStyle={styles.tabContentContainer}>
@@ -91,7 +91,30 @@ export default function SearchTab({
           ) : Boolean(catalogSearchError) ? (
             <Text style={styles.catalogResultsError}>{catalogSearchError}</Text>
           ) : catalogResults && catalogResults.length === 0 ? (
-            <Text style={styles.catalogResultsEmpty}>{t.noResults || 'No results found.'}</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 18, paddingHorizontal: 16 }}>
+              <Text style={styles.catalogResultsEmpty}>
+                {searchType === 'bc'
+                  ? `No book found with Accession No "${searchQuery}".`
+                  : searchType === 'isbn'
+                  ? `No book found with ISBN "${searchQuery}".`
+                  : t.noResults || 'No results found.'}
+              </Text>
+              {(searchType === 'title' || searchType === 'author') && /^(?:[A-Za-z]?[0-9]{4,8}|97[89][0-9]{10}|[0-9]{10})$/.test(searchQuery.trim()) && typeof setSearchType === 'function' ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    const newType = /^(?:97[89][0-9]{10}|[0-9]{10})$/.test(searchQuery.trim()) ? 'isbn' : 'bc';
+                    setSearchType(newType);
+                    handleCatalogSearch(searchQuery, newType, 0);
+                  }}
+                  style={{ marginTop: 12, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: theme.accent + '20', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <MaterialIcons name="swap-horiz" size={18} color={theme.accent} />
+                  <Text style={{ fontSize: 13, color: theme.accent, fontWeight: '600' }}>
+                    Search as {/^(?:97[89][0-9]{10}|[0-9]{10})$/.test(searchQuery.trim()) ? 'ISBN' : 'Accession No'} instead
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : catalogResults ? (
             <>
               {catalogResults.map((item, index) => (
