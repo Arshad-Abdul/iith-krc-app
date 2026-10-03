@@ -2,6 +2,10 @@
   "name": "KRC-IITH",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "author": {
+    "name": "Arshad Abdul",
+    "email": "arsnaz1234@gmail.com"
+  },
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
